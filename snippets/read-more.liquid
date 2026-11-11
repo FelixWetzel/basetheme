@@ -1,0 +1,38 @@
+{% doc %}
+  A text clamped to four lines (six for the large text on mobile) with a "+ Mehr lesen" toggle below it,
+  shown only when the text actually runs longer. Used by
+  sections/media-text.liquid, sections/text.liquid,
+  sections/headline-banner.liquid, sections/faq.liquid,
+  sections/collection.liquid and
+  sections/dealers.liquid. Styles live in
+  assets/critical.css (.read-more), the behaviour in
+  assets/read-more.js — both global rather than this snippet's own
+  {% stylesheet %}/{% javascript %}, which Shopify only bundles on pages
+  that render the snippet.
+
+  @param {string} text - The text (may contain <br>)
+  @param {boolean} [rich] - The text is rich text HTML (paragraphs,
+    lists), so it goes in a <div class="rte"> instead of a <p>
+  @param {string} [class] - Extra classes for the wrapper (layout)
+
+  @example
+  {% render 'read-more', text: section.settings.text, class: 'media-text__text-wrap' %}
+{% enddoc %}
+
+<div class="read-more {{ class }}" data-read-more>
+  {%- if rich -%}
+    <div class="read-more__text read-more__text--rich rte" data-read-more-text>{{ text }}</div>
+  {%- else -%}
+    <p class="read-more__text" data-read-more-text>{{ text }}</p>
+  {%- endif -%}
+  <button
+    type="button"
+    class="read-more__toggle icon-plus"
+    data-read-more-toggle
+    data-label-more="{{ 'general.media_text.read_more' | t | escape }}"
+    data-label-less="{{ 'general.media_text.read_less' | t | escape }}"
+    hidden
+  >
+    {{- 'general.media_text.read_more' | t -}}
+  </button>
+</div>

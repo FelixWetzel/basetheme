@@ -1,0 +1,302 @@
+{% doc %}
+  Renders one half of a two-up hero banner: an image with a top
+  overlay row (product name + optional subline on the left, a call to
+  action on the right). Meant to be used in pairs inside the
+  hero-banner-two-up section, which lays two of these side by side on
+  desktop and stacks them on mobile.
+
+  Shares its visual language (parallax scroll) with the single-image
+  hero-banner section.
+
+  @example
+  {% content_for 'block', type: 'hero-banner-two-up-item', id: 'hero-banner-two-up-item' %}
+{% enddoc %}
+
+<a
+  {% if block.settings.link != blank %}
+    href="{{ block.settings.link }}"
+  {% endif %}
+  class="hero-banner-two-up-item hero-banner-two-up-item--{{ block.settings.text_color }}"
+  {{ block.shopify_attributes }}
+>
+  <div
+    class="hero-banner-two-up-item__media{% if block.settings.background_type == 'color' %} hero-banner-two-up-item__media--color{% endif %}"
+    {% if block.settings.background_type == 'color' %}
+      style="background-color: {{ block.settings.background_color }};"
+    {% elsif block.settings.image_darken > 0 %}
+      style="--image-darken: {{ block.settings.image_darken | divided_by: 100.0 }};"
+    {% endif %}
+  >
+    {% if block.settings.background_type == 'color' %}
+      {% comment %} Plain colour field, no image or video {% endcomment %}
+    {% elsif block.settings.video != blank %}
+      {{
+        block.settings.video
+        | video_tag:
+          image_size: '1200x',
+          autoplay: true,
+          loop: true,
+          muted: true,
+          controls: false,
+          playsinline: true
+      }}
+    {% else %}
+      <picture>
+        {% if block.settings.image_mobile != blank %}
+          <source
+            media="(max-width: 749px)"
+            srcset="
+              {{ block.settings.image_mobile | image_url: width: 750 }} 1x,
+              {{ block.settings.image_mobile | image_url: width: 1500 }} 2x
+            "
+          >
+        {% endif %}
+        {% if block.settings.image != blank %}
+          <img
+            src="{{ block.settings.image | image_url: width: 1200 }}"
+            srcset="
+              {{ block.settings.image | image_url: width: 1200 }} 1x,
+              {{ block.settings.image | image_url: width: 2400 }} 2x
+            "
+            alt="{{ block.settings.image.alt | default: block.settings.image_mobile.alt | escape }}"
+            loading="lazy"
+            width="{{ block.settings.image.width }}"
+            height="{{ block.settings.image.height }}"
+          >
+        {% endif %}
+      </picture>
+    {% endif %}
+  </div>
+
+  <div class="hero-banner-two-up-item__content">
+    <div class="hero-banner-two-up-item__text">
+      <p class="hero-banner-two-up-item__headline">{{ block.settings.headline }}</p>
+
+      {% if block.settings.subtitle != blank %}
+        <p class="hero-banner-two-up-item__subtitle">{{ block.settings.subtitle }}</p>
+      {% endif %}
+    </div>
+
+    {% if block.settings.cta_text != blank %}
+      <p class="hero-banner-two-up-item__cta cta">{{ block.settings.cta_text }}</p>
+    {% endif %}
+  </div>
+</a>
+
+{% stylesheet %}
+  .hero-banner-two-up-item {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    height: 90svh;
+    min-height: 36rem;
+    text-decoration: none;
+  }
+
+  .hero-banner-two-up-item__media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    overflow: hidden;
+    /* Named view-timeline so the image can be linked to this
+       banner's own scroll progress through the viewport. Reusing the
+       same custom-ident as the single-image hero-banner is safe: each
+       img looks up its own nearest ancestor with this name, never a
+       sibling's. */
+    view-timeline-name: --hero-banner-view;
+    view-timeline-axis: block;
+  }
+
+  /* Optional black veil over the image/video, for light text on a
+     bright image. */
+  .hero-banner-two-up-item__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / var(--image-darken, 0));
+    pointer-events: none;
+  }
+
+  /* Colour instead of image: no darkening veil on top of it */
+  .hero-banner-two-up-item__media--color::after {
+    content: none;
+  }
+
+  .hero-banner-two-up-item__media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-banner-two-up-item__media img,
+  .hero-banner-two-up-item__media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: hero-banner-two-up-parallax linear both;
+    animation-timeline: --hero-banner-view;
+    animation-range: cover 0% cover 100%;
+  }
+
+  /* 1.08 is just enough headroom for the ±3.5% drift (3.5% × 1.08
+     < the 4% overhang per edge), keeping as much of the image
+     visible as possible — mobile hero images are cut to exactly the
+     banner's 4:5 frame, so every extra % of scale crops the sides. */
+  @keyframes hero-banner-two-up-parallax {
+    from {
+      transform: scale(1.08) translateY(-3.5%);
+    }
+    to {
+      transform: scale(1.08) translateY(3.5%);
+    }
+  }
+
+  /* Full item height, so that the text and CTA below can each stick
+     on their own (see there). */
+  .hero-banner-two-up-item__content {
+    align-self: stretch;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    width: 100%;
+    padding: var(--space-16) var(--page-margin);
+  }
+
+  /* Text and CTA stick separately rather than as one row: as the
+     banner scrolls out, each is pushed up only once its own bottom
+     reaches the banner's — so a one-line CTA rides all the way down
+     instead of leaving early with a taller headline + subtitle. */
+  .hero-banner-two-up-item__text,
+  .hero-banner-two-up-item__cta {
+    position: sticky;
+    top: calc(var(--sticky-offset, var(--header-height, 3.5rem)) + var(--space-16));
+  }
+
+  .hero-banner-two-up-item__text {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+
+  .hero-banner-two-up-item__headline,
+  .hero-banner-two-up-item__subtitle {
+    margin: 0;
+  }
+
+  .hero-banner-two-up-item__headline {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .hero-banner-two-up-item__cta {
+    flex: 1 0 0;
+    margin: 0;
+    text-align: right;
+  }
+
+  .hero-banner-two-up-item--light {
+    color: var(--color-background);
+  }
+
+  .hero-banner-two-up-item--dark {
+    color: var(--color-foreground);
+  }
+
+  @media (max-width: 749px) {
+    /* 4:5, same as the product cards and the single hero banner. */
+    .hero-banner-two-up-item {
+      height: auto;
+      min-height: 0;
+      aspect-ratio: 4 / 5;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_banner_two_up_item",
+  "settings": [
+    {
+      "type": "select",
+      "id": "background_type",
+      "label": "t:labels.background_type",
+      "options": [
+        { "value": "image", "label": "t:options.background_type.image" },
+        { "value": "color", "label": "t:options.background_type.color" }
+      ],
+      "default": "image"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "t:labels.background_color",
+      "info": "t:labels.background_color_info",
+      "default": "#e5e5e5",
+      "visible_if": "{{ block.settings.background_type == 'color' }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:labels.image_mobile"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "range",
+      "id": "image_darken",
+      "label": "t:labels.image_darken",
+      "info": "t:labels.image_darken_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "t:labels.headline",
+      "default": "Product Name"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "t:labels.subtitle"
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "t:labels.cta_text",
+      "default": "Call to action"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link"
+    },
+    {
+      "type": "select",
+      "id": "text_color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "dark"
+    }
+  ],
+  "presets": [{ "name": "t:general.hero_banner_two_up_item" }]
+}
+{% endschema %}

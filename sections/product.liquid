@@ -1,0 +1,1217 @@
+{% comment %}
+  Product page: a scrollable image gallery (stacked on desktop, a
+  swipeable carousel on mobile) next to a sticky detail panel (title,
+  price, color swatches, description, accordion, add-to-cart — fixed
+  to the bottom of the viewport on mobile). Native product
+  recommendations load below via `sections/product-recommendations.liquid`.
+{% endcomment %}
+
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+
+  assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+  unless color_option
+    assign color_option = product.options_with_values | where: 'name', 'Color' | first
+  endunless
+
+  assign current_variant_gallery = current_variant.metafields.custom.gallery.value
+  assign has_current_variant_gallery = false
+  if current_variant_gallery.size > 0
+    assign has_current_variant_gallery = true
+  endif
+  assign current_variant_image = current_variant.featured_image
+%}
+
+<div class="product full-width">
+  <div class="product__gallery">
+    <div class="product__breadcrumbs-overlay">
+      {% render 'product-breadcrumbs' %}
+    </div>
+
+    <div class="product-gallery__track" data-product-gallery>
+      {% if has_current_variant_gallery %}
+        {% for file in current_variant_gallery %}
+          {% assign gallery_image = file.preview_image %}
+          <img
+            class="product-gallery__image"
+            src="{{ gallery_image | image_url: width: 1200 }}"
+            srcset="
+              {{ gallery_image | image_url: width: 1200 }} 1x,
+              {{ gallery_image | image_url: width: 2400 }} 2x
+            "
+            alt="{{ gallery_image.alt | default: product.title | escape }}"
+            loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+            width="{{ gallery_image.width }}"
+            height="{{ gallery_image.height }}"
+          >
+        {% endfor %}
+      {% else %}
+        {% if current_variant_image %}
+          <img
+            class="product-gallery__image"
+            src="{{ current_variant_image | image_url: width: 1200 }}"
+            srcset="
+              {{ current_variant_image | image_url: width: 1200 }} 1x,
+              {{ current_variant_image | image_url: width: 2400 }} 2x
+            "
+            alt="{{ current_variant_image.alt | default: product.title | escape }}"
+            loading="eager"
+            width="{{ current_variant_image.width }}"
+            height="{{ current_variant_image.height }}"
+            data-variant-ids="{{ current_variant_image.variants | map: 'id' | join: ' ' }}"
+          >
+        {% endif %}
+        {% for image in product.images %}
+          {% unless current_variant_image and image == current_variant_image %}
+            <img
+              class="product-gallery__image"
+              src="{{ image | image_url: width: 1200 }}"
+              srcset="
+                {{ image | image_url: width: 1200 }} 1x,
+                {{ image | image_url: width: 2400 }} 2x
+              "
+              alt="{{ image.alt | default: product.title | escape }}"
+              loading="{% if forloop.first and current_variant_image == blank %}eager{% else %}lazy{% endif %}"
+              width="{{ image.width }}"
+              height="{{ image.height }}"
+              data-variant-ids="{{ image.variants | map: 'id' | join: ' ' }}"
+            >
+          {% endunless %}
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <div class="product-gallery__dots" role="tablist" aria-label="{{ 'products.card.images' | t }}" hidden>
+    </div>
+
+    <span class="product-gallery__zoom-cursor icon-plus" data-zoom-cursor hidden aria-hidden="true">
+      {{ 'products.zoom' | t }}
+    </span>
+  </div>
+
+  <dialog class="product-zoom" data-product-zoom closedby="any">
+    <div class="product-zoom__frame">
+      {% # theme-check-disable ImgWidthAndHeight, RemoteAsset %}
+      <img class="product-zoom__image" data-product-zoom-image src="" alt="" width="1" height="1">
+      {% # theme-check-enable ImgWidthAndHeight, RemoteAsset %}
+      <button type="button" class="product-zoom__close" data-product-zoom-close aria-label="{{ 'general.header.close' | t }}">
+        {{ 'general.header.close' | t }}
+      </button>
+    </div>
+  </dialog>
+
+  {% comment %}
+    Per-variant galleries (from each variant's custom.gallery metafield —
+    Shopify only allows one native image per variant, so this metafield
+    is the workaround for several) as JSON, so a swatch click can rebuild
+    the gallery client-side without a page reload. A variant with no
+    gallery of its own is simply absent from this map, and the click
+    handler falls back to the variant's single native image.
+  {% endcomment %}
+  {% liquid
+    assign any_variant_emitted = false
+    capture variant_galleries_json
+      echo '{'
+      for product_variant in product.variants
+        assign this_gallery = product_variant.metafields.custom.gallery.value
+        if this_gallery.size > 0
+          if any_variant_emitted
+            echo ','
+          endif
+          echo '"'
+          echo product_variant.id
+          echo '":['
+          assign any_file_emitted = false
+          for file in this_gallery
+            assign this_image = file.preview_image
+            if any_file_emitted
+              echo ','
+            endif
+            echo '{"src":'
+            echo this_image | image_url: width: 1200 | json
+            echo ',"src2x":'
+            echo this_image | image_url: width: 2400 | json
+            echo ',"alt":'
+            echo this_image.alt | default: product.title | json
+            echo ',"width":'
+            echo this_image.width | default: 0
+            echo ',"height":'
+            echo this_image.height | default: 0
+            echo '}'
+            assign any_file_emitted = true
+          endfor
+          echo ']'
+          assign any_variant_emitted = true
+        endif
+      endfor
+      echo '}'
+    endcapture
+  %}
+  <script type="application/json" data-variant-galleries>{{ variant_galleries_json }}</script>
+
+  <div class="product__detail">
+    <div class="product__breadcrumbs-panel">
+      {% render 'product-breadcrumbs' %}
+    </div>
+
+    {% form 'product', product, class: 'product-detail' %}
+      <input type="hidden" name="id" value="{{ current_variant.id }}" data-product-variant-id>
+      <input type="hidden" name="return_to" value="{{ routes.cart_url }}">
+      <input type="hidden" data-cart-add-url value="{{ routes.cart_add_url }}">
+
+      <div class="product-detail__header">
+        <h1 class="product-detail__title">{{ product.title }}</h1>
+        <p class="product-detail__price" data-product-price>{{ current_variant.price | divided_by: 100 }} €</p>
+      </div>
+
+      {% if color_option %}
+        <div class="product-detail__variant">
+          <p class="product-detail__variant-name" data-product-variant-name>{{ current_variant.option1 }}</p>
+
+          <div class="product-detail__swatches" role="radiogroup" aria-label="{{ color_option.name }}">
+            {% for value in color_option.values %}
+              {% assign swatch_variant = product.variants | where: 'option1', value.name | first %}
+              <button
+                type="button"
+                class="product-detail__swatch{% if value.name == current_variant.option1 %} is-selected{% endif %}{% unless swatch_variant.available %} is-unavailable{% endunless %}"
+                style="background-color: {{ value.swatch.color | default: '#cccccc' }};{% if value.swatch.image %} background-image: url({{ value.swatch.image | image_url: width: 60 }});{% endif %}"
+                data-product-swatch
+                data-variant-id="{{ swatch_variant.id }}"
+                data-variant-name="{{ value.name | escape }}"
+                data-variant-price="{{ swatch_variant.price | divided_by: 100 }}"
+                data-variant-available="{{ swatch_variant.available }}"
+                aria-label="{{ value.name | escape }}"
+                aria-pressed="{% if value.name == current_variant.option1 %}true{% else %}false{% endif %}"
+              ></button>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if product.metafields.custom.info != blank %}
+        <div class="product-detail__description rte">{{ product.metafields.custom.info | metafield_tag }}</div>
+      {% endif %}
+
+      <div class="product-detail__accordion">
+        {% if product.description != blank %}
+          <details class="product-accordion">
+            <summary class="product-accordion__summary">
+              <span>{{ 'products.accordion.description' | t }}</span>
+              <span class="product-accordion__icon icon-plus" aria-hidden="true"></span>
+            </summary>
+            <div class="product-accordion__content rte">{{ product.description }}</div>
+          </details>
+        {% endif %}
+
+        {% if product.metafields.custom.details != blank %}
+          <details class="product-accordion">
+            <summary class="product-accordion__summary">
+              <span>{{ 'products.accordion.details' | t }}</span>
+              <span class="product-accordion__icon icon-plus" aria-hidden="true"></span>
+            </summary>
+            <div class="product-accordion__content rte">{{ product.metafields.custom.details | metafield_tag }}</div>
+          </details>
+        {% endif %}
+
+        {% if product.metafields.custom.care != blank %}
+          <details class="product-accordion">
+            <summary class="product-accordion__summary">
+              <span>{{ 'products.accordion.care' | t }}</span>
+              <span class="product-accordion__icon icon-plus" aria-hidden="true"></span>
+            </summary>
+            <div class="product-accordion__content rte">{{ product.metafields.custom.care | metafield_tag }}</div>
+          </details>
+        {% endif %}
+
+        {% if section.settings.shipping_text != blank %}
+          <details class="product-accordion">
+            <summary class="product-accordion__summary">
+              <span>{{ 'products.accordion.shipping' | t }}</span>
+              <span class="product-accordion__icon icon-plus" aria-hidden="true"></span>
+            </summary>
+            <div class="product-accordion__content rte">{{ section.settings.shipping_text }}</div>
+          </details>
+        {% endif %}
+      </div>
+
+      <div class="product-detail__submit-bar">
+        {% # Sold out: offers the newsletter (snippets/newsletter-popup.liquid) to hear about new pieces %}
+        {% if settings.show_sold_out_newsletter %}
+          {% liquid
+            assign notify_text = settings.sold_out_newsletter_text
+            if notify_text == blank
+              assign notify_text = 'products.notify' | t
+            endif
+          %}
+          <button
+            type="button"
+            class="product-detail__notify"
+            data-product-notify
+            {% if current_variant.available %}hidden{% endif %}
+          >
+            <span class="cta">{{ notify_text | escape }}</span>
+          </button>
+        {% endif %}
+        <button
+          type="submit"
+          class="product-detail__submit"
+          data-product-submit
+          data-label-available="{{ 'products.add_to_cart' | t | escape }}"
+          data-label-unavailable="{{ 'products.sold_out' | t | escape }}"
+          {% unless current_variant.available %}disabled{% endunless %}
+        >
+          <span data-product-submit-text>
+            {% if current_variant.available %}
+              {{ 'products.add_to_cart' | t }}
+            {% else %}
+              {{ 'products.sold_out' | t }}
+            {% endif %}
+          </span>
+        </button>
+      </div>
+    {% endform %}
+  </div>
+</div>
+
+{% liquid
+  assign manual_recommendations = product.metafields.custom.recommended_products.value
+  assign manual_variant_recommendations = product.metafields.custom.recommended_variants.value
+  assign has_manual_recommendations = false
+  if manual_recommendations.size > 0 or manual_variant_recommendations.size > 0
+    assign has_manual_recommendations = true
+  endif
+%}
+
+{% if has_manual_recommendations %}
+  {% comment %}
+    Merchant picked specific variants (custom.recommended_variants,
+    always in their own color) and/or products (custom.recommended_products,
+    following the color selected above) — use those instead of
+    Shopify's automatic recommendations. On a color change the JS
+    below re-renders this section for that variant and swaps this in.
+  {% endcomment %}
+  {% liquid
+    assign current_color = ''
+    for option in product.options_with_values
+      if option.name == 'Farbe' or option.name == 'Color'
+        assign current_color = current_variant.options[forloop.index0]
+      endif
+    endfor
+  %}
+  <div class="product-recommendations full-width" data-product-recommendations-manual="{{ section.id }}">
+    {% render 'product-recommendations-content',
+      variants: manual_variant_recommendations,
+      products: manual_recommendations,
+      color: current_color
+    %}
+  </div>
+{% else %}
+  <div
+    id="product-recommendations-{{ section.id }}"
+    class="product-recommendations full-width"
+    data-product-recommendations
+    data-url="{{ routes.product_recommendations_url }}?section_id=product-recommendations&product_id={{ product.id }}&limit=4&intent=related"
+  ></div>
+{% endif %}
+
+{% stylesheet %}
+  .product {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .product__gallery {
+    position: relative;
+  }
+
+  /* The breadcrumb overlaid on the gallery image — mobile only, the
+     desktop copy lives at the top of the detail panel instead (see
+     .product__breadcrumbs-panel). Same component, rendered twice,
+     toggled by media query rather than duplicating markup logic. */
+  .product__breadcrumbs-overlay {
+    position: absolute;
+    top: var(--space-16);
+    left: var(--page-margin);
+    z-index: 1;
+  }
+
+  .product__breadcrumbs-panel {
+    display: none;
+  }
+
+  @media (min-width: 750px) {
+    .product__breadcrumbs-overlay {
+      display: none;
+    }
+
+    .product__breadcrumbs-panel {
+      display: block;
+      padding: var(--space-16) var(--space-16) 0 0;
+    }
+  }
+
+  .product-gallery__track {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-gallery__image {
+    width: 100%;
+    height: auto;
+  }
+
+  .product-gallery__dots {
+    display: none;
+  }
+
+  .product-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+    padding: var(--space-16);
+    /* .product's own flex `gap` already provides this on mobile
+       (stacked layout) — without zeroing it here, this padding stacks
+       on top for 32px instead of the intended 16px. Same reasoning as
+       the desktop padding-left:0 override below, just the other axis. */
+    padding-top: 0;
+    /* Bounds the sticky add-to-cart button (below) to this box —
+       without it, some browsers let the sticky element escape past
+       its container once .product-detail scrolls out of view,
+       leaving it floating over the header/recommendations instead of
+       releasing at its natural position. */
+    overflow: clip;
+  }
+
+  /* The colour name sits directly below the title/price line, without
+     the form's 32px gap between them. */
+  .product-detail__header + .product-detail__variant {
+    margin-top: calc(-1 * var(--space-32));
+  }
+
+  .product-detail__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-16);
+  }
+
+  .product-detail__title {
+    margin: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .product-detail__price {
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .product-detail__variant {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .product-detail__variant-name {
+    margin: 0;
+  }
+
+  .product-detail__swatches {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+
+  .product-detail__swatch {
+    width: 24px;
+    height: 24px;
+    padding: 2px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+    /* An image swatch (e.g. a wood grain) wins over the colour, fitted
+       to the same inner box. */
+    background-origin: content-box;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+  }
+
+  .product-detail__swatch.is-selected {
+    border-color: var(--color-foreground);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* Same black border as the selected swatch, shown instantly. */
+    .product-detail__swatch:hover {
+      border-color: var(--color-foreground);
+    }
+  }
+
+  .product-detail__swatch.is-unavailable {
+    opacity: 0.3;
+  }
+
+  .product-detail__description {
+    margin: 0;
+  }
+
+  .product-detail__accordion {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-accordion {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .product-accordion:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .product-accordion__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-8) 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .product-accordion__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Closed: thin "+" from .icon-plus (critical.css). Open: the
+     font's own "−", so the drawn icon is switched off. */
+  .product-accordion[open] .product-accordion__icon::before {
+    content: '−';
+    width: auto;
+    height: auto;
+    vertical-align: baseline;
+    background: none;
+    mask: none;
+  }
+
+  /* One blank line (a line height) between the title and the text —
+     the summary's own 8px bottom padding already counts towards it. */
+  .product-accordion__content {
+    padding-top: calc(var(--line-height-body) - var(--space-8));
+    padding-bottom: var(--space-16);
+  }
+
+  /* Paragraphs here have no margins (global reset), so a blank line
+     typed in the rich text editor is an empty paragraph — shown as one
+     line of space rather than hidden (the global p:empty rule) or
+     collapsed to nothing. Covers <p></p>, <p><br></p> and a paragraph
+     with only an empty <strong> left over from formatting. */
+  .product-accordion__content p:empty,
+  .product-accordion__content p:has(> :empty:only-child) {
+    display: block;
+    min-height: var(--line-height-body);
+  }
+
+  /* Flush with the rest of the text (no browser-default list indent),
+     matching the plain, non-bulleted accordion content. */
+  .product-accordion__content ul,
+  .product-accordion__content ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Square bullets (matching the dots used elsewhere in the theme)
+     instead of the browser's default round ones. */
+  .product-accordion__content ul li {
+    position: relative;
+    padding-left: calc(4px + var(--space-6));
+  }
+
+  .product-accordion__content ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 4px;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .product-detail__submit {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-detail__submit:not(:disabled):hover {
+      opacity: 0.9;
+    }
+  }
+
+  /* Plain text link with the CTA triangle, not a second button. */
+  .product-detail__notify {
+    display: block;
+    margin-bottom: var(--space-12);
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    color: var(--color-foreground);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .product-detail__notify[hidden] {
+    display: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-detail__notify:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .product-detail__submit:disabled {
+    background-color: var(--color-muted-solid);
+    color: var(--color-background);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .product-recommendations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding: var(--space-16) var(--page-margin) 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Desktop: close to the product (the gallery ends right above the
+     line). Mobile: the line moves 96px below the add-to-cart button
+     (minus the 16px the product panel already leaves below it), so it
+     separates the purchase from the recommendations instead of
+     closing off the button. */
+  @media (max-width: 749px) {
+    .product-recommendations {
+      margin-top: calc(var(--space-96) - var(--space-16));
+    }
+  }
+
+  .product-recommendations__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .product-recommendations__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-32) var(--space-4);
+  }
+
+  @media (max-width: 749px) {
+    .product-gallery__track {
+      flex-direction: row;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      gap: 0;
+    }
+
+    .product-gallery__track::-webkit-scrollbar {
+      display: none;
+    }
+
+    .product-gallery__image {
+      flex: 0 0 100%;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      scroll-snap-align: start;
+    }
+
+    /* Overlaid on the current image, not below it. */
+    .product-gallery__dots:not([hidden]) {
+      position: absolute;
+      left: var(--space-16);
+      right: 0;
+      bottom: var(--space-16);
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: var(--space-8);
+    }
+
+    .product-gallery__dot {
+      width: 4px;
+      height: 4px;
+      padding: 0;
+      border: none;
+      background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+      cursor: pointer;
+    }
+
+    .product-gallery__dot.is-active {
+      background-color: var(--color-foreground);
+    }
+
+    /* Snaps into place at the bottom once scrolled that far (its
+       natural position in the form), rather than being pinned to the
+       viewport the whole time. The bar, not the button, is sticky: a
+       white band around the button — 16px above, edge to edge — plus
+       a band down past the bottom of the screen (under Safari's
+       floating toolbar), so content scrolling underneath doesn't show
+       through. Its own element rather than pseudo-elements on the
+       button, since Safari picks its toolbar colour by hit-testing and
+       a pseudo-element counts as its (black) host. The negative
+       margins cancel the padding, so the natural layout is unchanged;
+       .product-detail's overflow: clip ends the bands with the panel,
+       so they never cover the recommendations. */
+    .product-detail__submit-bar {
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      margin: calc(-1 * var(--space-16));
+      padding: var(--space-16);
+      background-color: var(--color-background);
+    }
+
+    .product-detail__submit-bar::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      height: 100vh;
+      background-color: var(--color-background);
+      /* Safari clips this band visually at .product-detail's edge but
+         not for touches — without this it would swallow swipes on the
+         recommended products' image slideshows below. The bar itself
+         (touching the bottom edge) is what Safari samples for its
+         toolbar colour. */
+      pointer-events: none;
+    }
+  }
+
+  @media (min-width: 750px) {
+    .product {
+      flex-direction: row;
+      /* Stretch (not flex-start) so the right column matches the
+         gallery's full height — needed so the breadcrumb (top) and
+         the form (bottom-anchored below, via margin-top: auto) can
+         sit at opposite ends of that same full-height column. */
+      align-items: stretch;
+      gap: var(--space-16);
+    }
+
+    .product-recommendations__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* A thin gap between the stacked images — the same 4px as between
+       the product cards in the collection grid. */
+    .product-gallery__track {
+      gap: var(--space-4);
+    }
+
+    /* The gallery spans exactly the first two columns of the 4-column
+       recommendations grid below (50% minus half its 4px gap), so its
+       right edge lines up with the second card. The detail column takes
+       the rest, keeping the 16px gap from .product. */
+    .product__gallery {
+      flex: 0 0 calc(50% - var(--space-4) / 2);
+      min-width: 0;
+    }
+
+    .product__detail {
+      flex: 1 0 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* The flex `gap` on .product already provides the 16px from the
+       image — without this, the form's own left padding would stack
+       on top of it for a 32px gap. padding-top is restored here since
+       the mobile-only reason for zeroing it (stacked layout, same
+       flex `gap` issue on the other axis) doesn't apply to this
+       side-by-side desktop layout. */
+    .product-detail {
+      padding-left: 0;
+      padding-top: var(--space-16);
+      margin-top: auto;
+      position: sticky;
+      bottom: 0;
+    }
+  }
+
+  /* "Zoom" follows the cursor over a gallery image, replacing it
+     entirely — only on genuinely wide desktop viewports with actual
+     hover support (not narrow/tablet-width windows, even if they're
+     technically "desktop"). */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .product-gallery__image {
+      cursor: none;
+    }
+
+    .product-gallery__zoom-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 20;
+      color: var(--color-foreground);
+      text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .product-gallery__zoom-cursor::before {
+      margin-right: var(--space-4);
+    }
+  }
+
+  .product-zoom {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow: auto;
+    /* Browsers give <dialog> an opaque white background by default —
+       without this override it would show through the gaps in the
+       dot pattern below instead of the page content. */
+    background-color: transparent;
+    /* Same halftone scrim as the header menu drawer — two staggered
+       layers of a tiny square tile (see sections/header.liquid). */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+  }
+
+  .product-zoom::backdrop {
+    background: transparent;
+  }
+
+  .product-zoom[open] {
+    display: block;
+    text-align: center;
+  }
+
+  .product-zoom__frame {
+    /* Grid (not just inline-block) so the close button can share the
+       same cell as the image and overlay it directly, rather than
+       sitting after it in normal flow. */
+    display: inline-grid;
+  }
+
+  .product-zoom__image {
+    grid-area: 1 / 1;
+    display: block;
+    width: auto;
+    height: 150vh;
+    max-width: none;
+  }
+
+  .product-zoom__close {
+    /* Sticky (not absolute) so it stays on screen as the zoomed
+       image — taller than the viewport — scrolls underneath it, but
+       constrained to the image's own box (its grid cell) rather than
+       the whole viewport, so it stays visually on the image instead
+       of drifting onto the scrim beside a narrower image. */
+    grid-area: 1 / 1;
+    position: sticky;
+    top: var(--space-16);
+    justify-self: end;
+    align-self: start;
+    margin-right: var(--space-16);
+    z-index: 1;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .product-zoom__close:focus-visible {
+    outline: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-zoom__close:hover {
+      opacity: 0.8;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const gallery = document.querySelector('[data-product-gallery]');
+    const dotsContainer = document.querySelector('.product-gallery__dots');
+    const galleriesScript = document.querySelector('[data-variant-galleries]');
+
+    let variantGalleries = {};
+    if (galleriesScript) {
+      try {
+        variantGalleries = JSON.parse(galleriesScript.textContent);
+      } catch (error) {
+        variantGalleries = {};
+      }
+    }
+
+    let images = [];
+    let dots = [];
+    let observer = null;
+
+    const attachObserver = () => {
+      if (observer) observer.disconnect();
+      if (!gallery || images.length < 2) return;
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const index = images.indexOf(entry.target);
+            dots.forEach((dot) => dot.classList.remove('is-active'));
+            dots[index]?.classList.add('is-active');
+          });
+        },
+        { root: gallery, threshold: 0.6 }
+      );
+
+      images.forEach((image) => observer.observe(image));
+    };
+
+    const rebuildDots = () => {
+      if (!dotsContainer) return;
+      dotsContainer.innerHTML = '';
+
+      if (images.length > 1) {
+        dotsContainer.hidden = false;
+        images.forEach((_, index) => {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = `product-gallery__dot${index === 0 ? ' is-active' : ''}`;
+          dot.addEventListener('click', () => {
+            images[index].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+          });
+          dotsContainer.appendChild(dot);
+        });
+      } else {
+        dotsContainer.hidden = true;
+      }
+
+      dots = Array.from(dotsContainer.querySelectorAll('.product-gallery__dot'));
+    };
+
+    const refreshImages = () => {
+      images = gallery ? Array.from(gallery.querySelectorAll('.product-gallery__image')) : [];
+      rebuildDots();
+      attachObserver();
+    };
+
+    refreshImages();
+
+    // A variant with its own `custom.gallery` metafield gets its images
+    // swapped in wholesale (Shopify only allows one native image per
+    // variant, so this metafield is the workaround for several).
+    // Otherwise, fall back to scrolling to that variant's single native
+    // image among the currently shown (shared) images.
+    const setGalleryVariant = (variantId) => {
+      if (!variantId) return;
+
+      const items = variantGalleries[variantId];
+      if (items && items.length > 0 && gallery) {
+        gallery.innerHTML = '';
+        items.forEach((item, index) => {
+          const img = document.createElement('img');
+          img.className = 'product-gallery__image';
+          img.src = item.src;
+          img.srcset = `${item.src} 1x, ${item.src2x} 2x`;
+          img.alt = item.alt || '';
+          img.loading = index === 0 ? 'eager' : 'lazy';
+          img.width = item.width;
+          img.height = item.height;
+          gallery.appendChild(img);
+        });
+        refreshImages();
+        return;
+      }
+
+      const index = images.findIndex((image) =>
+        (image.dataset.variantIds || '').split(' ').includes(variantId)
+      );
+      if (index === -1) return;
+
+      dots.forEach((dot) => dot.classList.remove('is-active'));
+      dots[index]?.classList.add('is-active');
+      images[index].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    };
+
+    // Hand-picked recommended products follow the selected color: re-render
+    // this section for the new variant and swap in its recommendations.
+    // Only the latest request wins when colors are clicked in quick succession.
+    const manualRecommendations = document.querySelector('[data-product-recommendations-manual]');
+    let recommendationsRequest = 0;
+    const updateRecommendations = (variantId) => {
+      if (!manualRecommendations || !variantId) return;
+      const request = ++recommendationsRequest;
+      const url = new URL(window.location.pathname, window.location.origin);
+      url.searchParams.set('variant', variantId);
+      url.searchParams.set('section_id', manualRecommendations.dataset.productRecommendationsManual);
+      fetch(url)
+        .then((response) => response.text())
+        .then((html) => {
+          if (request !== recommendationsRequest) return;
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const content = doc.querySelector('[data-product-recommendations-manual]');
+          if (content) manualRecommendations.innerHTML = content.innerHTML;
+        });
+    };
+
+    const form = document.querySelector('.product-detail');
+    if (form) {
+      const variantIdInput = form.querySelector('[data-product-variant-id]');
+      const priceEl = form.querySelector('[data-product-price]');
+      const nameEl = form.querySelector('[data-product-variant-name]');
+      const submitButton = form.querySelector('[data-product-submit]');
+      const submitText = form.querySelector('[data-product-submit-text]');
+      const notifyButton = form.querySelector('[data-product-notify]');
+      const swatches = form.querySelectorAll('[data-product-swatch]');
+
+      swatches.forEach((swatch) => {
+        swatch.addEventListener('click', () => {
+          swatches.forEach((other) => {
+            other.classList.remove('is-selected');
+            other.setAttribute('aria-pressed', 'false');
+          });
+          swatch.classList.add('is-selected');
+          swatch.setAttribute('aria-pressed', 'true');
+
+          if (variantIdInput) variantIdInput.value = swatch.dataset.variantId;
+          if (priceEl) priceEl.textContent = `${swatch.dataset.variantPrice} €`;
+          if (nameEl) nameEl.textContent = swatch.dataset.variantName;
+          setGalleryVariant(swatch.dataset.variantId);
+          updateRecommendations(swatch.dataset.variantId);
+
+          const available = swatch.dataset.variantAvailable === 'true';
+          if (submitButton) submitButton.disabled = !available;
+          if (notifyButton) notifyButton.hidden = available;
+          if (submitText && submitButton) {
+            submitText.textContent = available
+              ? submitButton.dataset.labelAvailable
+              : submitButton.dataset.labelUnavailable;
+          }
+        });
+      });
+
+      notifyButton?.addEventListener('click', () => {
+        document.getElementById('newsletter-popup')?.showModal();
+      });
+
+      // Add to cart via AJAX instead of a full-page submit/redirect,
+      // then open the mini cart drawer — there's no standalone cart
+      // page in this theme anymore.
+      const cartAddUrlInput = form.querySelector('[data-cart-add-url]');
+      form.addEventListener('submit', (event) => {
+        if (!cartAddUrlInput || !window.ThemeCart) return;
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        if (submitButton) submitButton.disabled = true;
+
+        fetch(`${cartAddUrlInput.value}.js`, {
+          method: 'POST',
+          body: formData,
+          headers: { Accept: 'application/json' },
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error('cart add failed');
+            return window.ThemeCart.open();
+          })
+          .catch(() => form.submit())
+          .finally(() => {
+            if (submitButton) submitButton.disabled = false;
+          });
+      });
+    }
+
+    // "Zoom" cursor + click-to-zoom. Uses event delegation on the
+    // gallery container (not per-image listeners) so it still works
+    // after setGalleryVariant rebuilds the images.
+    const zoomCursor = document.querySelector('[data-zoom-cursor]');
+    const zoomDialog = document.querySelector('[data-product-zoom]');
+    const zoomImage = document.querySelector('[data-product-zoom-image]');
+    const zoomClose = document.querySelector('[data-product-zoom-close]');
+
+    // Only on genuinely wide desktop viewports with actual hover
+    // support — matches the CSS breakpoint below, not just "not
+    // mobile" (a narrow desktop/tablet window shouldn't get it either).
+    const supportsZoom = () =>
+      window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+
+    if (gallery && zoomCursor) {
+      gallery.addEventListener('pointermove', (event) => {
+        if (event.pointerType !== 'mouse' || !supportsZoom()) return;
+        const overImage = event.target.closest('.product-gallery__image');
+        zoomCursor.hidden = !overImage;
+        if (overImage) {
+          zoomCursor.style.left = `${event.clientX}px`;
+          zoomCursor.style.top = `${event.clientY}px`;
+        }
+      });
+
+      gallery.addEventListener('pointerleave', () => {
+        zoomCursor.hidden = true;
+      });
+
+      gallery.addEventListener('click', (event) => {
+        if (!supportsZoom()) return;
+        const image = event.target.closest('.product-gallery__image');
+        if (!image || !zoomDialog || !zoomImage) return;
+        zoomImage.src = image.currentSrc || image.src;
+        zoomImage.alt = image.alt;
+        zoomDialog.showModal();
+      });
+    }
+
+    if (zoomClose && zoomDialog) {
+      zoomClose.addEventListener('click', () => zoomDialog.close());
+    }
+
+    // The dialog fills the whole viewport, so there's no ::backdrop
+    // area to light-dismiss on — clicking the scrim (the dialog's own
+    // background) or the image itself closes it; only the close
+    // button's own click is excluded.
+    if (zoomDialog) {
+      zoomDialog.addEventListener('click', (event) => {
+        if (event.target === zoomDialog || event.target === zoomImage) zoomDialog.close();
+      });
+    }
+
+    // Animates the accordion's native open/close instead of the
+    // instant default — a `height` Web Animation from/to the
+    // collapsed and expanded pixel heights, only setting the real
+    // `open` attribute once the animation finishes. Clicking the
+    // content while open (not just the <summary>) also closes it.
+    document.querySelectorAll('.product-accordion').forEach((details) => {
+      const summary = details.querySelector('.product-accordion__summary');
+      const content = details.querySelector('.product-accordion__content');
+      if (!summary || !content) return;
+
+      let animation = null;
+      let isClosing = false;
+      let isExpanding = false;
+
+      const onFinish = (open) => {
+        details.open = open;
+        animation = null;
+        isClosing = false;
+        isExpanding = false;
+        details.style.height = details.style.overflow = '';
+      };
+
+      const expand = () => {
+        isExpanding = true;
+        const startHeight = `${details.offsetHeight}px`;
+        const endHeight = `${summary.offsetHeight + content.offsetHeight}px`;
+        animation?.cancel();
+        animation = details.animate({ height: [startHeight, endHeight] }, { duration: 250, easing: 'ease' });
+        animation.onfinish = () => onFinish(true);
+        animation.oncancel = () => (isExpanding = false);
+      };
+
+      const close = () => {
+        if (!details.open) return;
+        isClosing = true;
+        const startHeight = `${details.offsetHeight}px`;
+        const endHeight = `${summary.offsetHeight}px`;
+        details.style.overflow = 'hidden';
+        animation?.cancel();
+        animation = details.animate({ height: [startHeight, endHeight] }, { duration: 250, easing: 'ease' });
+        animation.onfinish = () => onFinish(false);
+        animation.oncancel = () => (isClosing = false);
+      };
+
+      const open = () => {
+        details.style.overflow = 'hidden';
+        details.style.height = `${details.offsetHeight}px`;
+        details.open = true;
+        window.requestAnimationFrame(expand);
+      };
+
+      summary.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (isClosing || !details.open) {
+          open();
+        } else if (isExpanding || details.open) {
+          close();
+        }
+      });
+
+      content.addEventListener('click', close);
+    });
+
+    // The placeholder itself already carries the .product-recommendations
+    // full-width classes (so it's correctly positioned before the fetch
+    // even resolves) — only the fetched fragment's *inner* content gets
+    // swapped in, so that class doesn't end up doubled one level deeper
+    // (which used to make full-width silently not apply at all, since
+    // that CSS rule only targets a direct .shopify-section child).
+    const recommendations = document.querySelector('[data-product-recommendations]');
+    if (recommendations) {
+      fetch(recommendations.dataset.url)
+        .then((response) => response.text())
+        .then((html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const content = doc.querySelector('.product-recommendations');
+          if (content) recommendations.innerHTML = content.innerHTML;
+        });
+    }
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.product",
+  "settings": [
+    {
+      "type": "richtext",
+      "id": "shipping_text",
+      "label": "t:labels.shipping_text"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

@@ -1,0 +1,76 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "page_submenu_PWL94m": {
+      "type": "page-submenu",
+      "disabled": true,
+      "name": "t:general.page_submenu",
+      "settings": {
+        "submenu": "footer"
+      }
+    },
+    "dealers_WmF6rH": {
+      "type": "dealers",
+      "blocks": {
+        "dealer_city_h9Vchz": {
+          "type": "dealer-city",
+          "settings": {
+            "city": ""
+          },
+          "blocks": {
+            "dealer_entry_jFAi4n": {
+              "type": "dealer-entry",
+              "name": "t:general.dealer_entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            },
+            "dealer_entry_KLGtNk": {
+              "type": "dealer-entry",
+              "name": "t:general.dealer_entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            },
+            "dealer_entry_aRJLmP": {
+              "type": "dealer-entry",
+              "name": "t:general.dealer_entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "dealer_entry_jFAi4n",
+            "dealer_entry_KLGtNk",
+            "dealer_entry_aRJLmP"
+          ]
+        }
+      },
+      "block_order": [
+        "dealer_city_h9Vchz"
+      ],
+      "name": "t:general.dealers",
+      "settings": {
+        "submenu": "menu2",
+        "headline": "Überschrift",
+        "text": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>"
+      }
+    }
+  },
+  "order": [
+    "page_submenu_PWL94m",
+    "dealers_WmF6rH"
+  ]
+}

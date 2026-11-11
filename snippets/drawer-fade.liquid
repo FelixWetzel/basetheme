@@ -1,0 +1,58 @@
+{% doc %}
+  Drawer content fade: when the menu, cart or filter drawer opens, its
+  content ([data-drawer-fade] elements) fades in just after the drawer
+  starts sliding in, all at once (or one after another via an
+  optional --fade-index, as in the filter drawer); the cart's
+  ([data-drawer-fade="subtle"]) only softly, from 40%. The title bar and close button stay put. Only on
+  opening (not when the cart re-renders while open). Off with reduced
+  motion or the theme setting.
+
+  @example
+  {% render 'drawer-fade' %}
+{% enddoc %}
+
+{% style %}
+  @keyframes drawer-content-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes drawer-content-fade-subtle {
+    from {
+      opacity: 0.4;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    dialog.is-fading-in [data-drawer-fade] {
+      animation: drawer-content-fade 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+      animation-delay: calc(0.15s + min(var(--fade-index, 0), 8) * 0.05s);
+    }
+
+    /* Cart: shorter and from 40%, all at once — just a soft settle */
+    dialog.is-fading-in [data-drawer-fade='subtle'] {
+      animation: drawer-content-fade-subtle 0.4s ease-out both;
+      animation-delay: 0.1s;
+    }
+  }
+{% endstyle %}
+
+<script>
+  (() => {
+    const fadeMs = 0.15 + 8 * 0.05 + 0.6;
+    document.querySelectorAll('#header-menu, #cart-drawer, .filter-drawer').forEach((dialog) => {
+      let timer = null;
+      new MutationObserver(() => {
+        if (!dialog.open) {
+          dialog.classList.remove('is-fading-in');
+          return;
+        }
+        if (dialog.classList.contains('is-fading-in')) return;
+        dialog.classList.add('is-fading-in');
+        clearTimeout(timer);
+        timer = setTimeout(() => dialog.classList.remove('is-fading-in'), fadeMs * 1000);
+      }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
+    });
+  })();
+</script>

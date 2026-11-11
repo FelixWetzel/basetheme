@@ -1,0 +1,48 @@
+{% doc %}
+  Renders the product page's breadcrumb trail ([Collection] / Product). Rendered twice by sections/product.liquid — once
+  overlaid on the gallery image (shown on mobile only) and once at
+  the top of the detail panel (shown on desktop only, to the right
+  of the image) — each instance toggled by CSS media query rather
+  than duplicated logic.
+
+  @example
+  {% render 'product-breadcrumbs' %}
+{% enddoc %}
+
+{% liquid
+  assign breadcrumb_collection = collection
+  unless breadcrumb_collection
+    assign breadcrumb_collection = product.collections.first
+  endunless
+%}
+
+{% # No "Home" step — the header logo already links there. Without a collection, a trail of just the product itself says nothing, so it's left out. %}
+{% if breadcrumb_collection %}
+  <nav class="product-breadcrumbs" aria-label="{{ 'products.breadcrumbs.label' | t }}">
+    <a href="{{ breadcrumb_collection.url }}">{{ breadcrumb_collection.title }}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ product.title }}</span>
+  </nav>
+{% endif %}
+
+{% stylesheet %}
+  .product-breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-muted);
+  }
+
+  .product-breadcrumbs a {
+    color: var(--color-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-breadcrumbs a:hover {
+      color: var(--color-foreground);
+    }
+  }
+{% endstylesheet %}

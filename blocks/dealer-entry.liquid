@@ -1,0 +1,29 @@
+<div class="dealer-entry" {{ block.shopify_attributes }}>
+  <p class="dealer-entry__details">{{ block.settings.details | newline_to_br }}</p>
+</div>
+
+{% stylesheet %}
+  .dealer-entry {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-8);
+  }
+
+  .dealer-entry__details {
+    margin: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.dealer_entry",
+  "settings": [
+    {
+      "type": "textarea",
+      "id": "details",
+      "label": "t:labels.dealer_details",
+      "default": "MANUFACTUM\nDienerstraße 12\n80331 München Altstadt-Lehel"
+    }
+  ],
+  "presets": [{ "name": "t:general.dealer_entry" }]
+}
+{% endschema %}

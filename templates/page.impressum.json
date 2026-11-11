@@ -1,0 +1,47 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "simple_page_7HCbP4": {
+      "type": "simple-page",
+      "blocks": {
+        "simple_page_item_mDhFyV": {
+          "type": "simple-page-item",
+          "settings": {
+            "heading": "",
+            "body": "<p><strong>Firmenname</strong><br/>Vorname Nachname</p><p>Straße Hausnummer<br/>PLZ Ort</p><p>E-Mail: <a href=\"mailto:info@example.com\">info@example.com</a><br/>Telefon: +49 000 000000</p><p>USt-IdNr.: DE000000000</p>"
+          },
+          "blocks": {}
+        },
+        "simple_page_item_AwBHgG": {
+          "type": "simple-page-item",
+          "name": "t:general.simple_page_item",
+          "settings": {
+            "heading": "",
+            "body": "<p><strong>Design und Development<br/></strong><a href=\"https://buerobuero.eu\" target=\"_blank\" title=\"https://buerobuero.eu\">BüroBüro.eu</a><br/></p>"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "simple_page_item_mDhFyV",
+        "simple_page_item_AwBHgG"
+      ],
+      "name": "t:general.simple_page",
+      "settings": {
+        "submenu": "footer-2",
+        "headline": "Überschrift"
+      }
+    }
+  },
+  "order": [
+    "simple_page_7HCbP4"
+  ]
+}

@@ -1,0 +1,104 @@
+{% comment %}
+  Simple text page (e.g. "Versand und Rückgaben", "Pflege"): an
+  optional full-width submenu (see snippets/page-submenu.liquid), then
+  a headline (left) and heading + body pairs added as theme-editor
+  blocks — (right) on the same row on desktop.
+{% endcomment %}
+
+<div class="simple-page-header full-width">
+  {% if section.settings.submenu != blank %}
+    {% render 'page-submenu', menu: section.settings.submenu %}
+  {% endif %}
+
+  <div class="simple-page-body">
+    {% if section.settings.headline != blank %}
+      <p class="simple-page-headline">{{ section.settings.headline }}</p>
+    {% endif %}
+
+    <div class="simple-page-content">
+      {% content_for 'blocks' %}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .simple-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-96);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  .simple-page-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .simple-page-headline {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .simple-page-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  @media (min-width: 750px) {
+    .simple-page-body {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .simple-page-headline {
+      grid-column: 1 / 3;
+    }
+
+    .simple-page-content {
+      grid-column: 3 / 5;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.simple_page",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "submenu",
+      "label": "t:labels.submenu",
+      "info": "t:labels.submenu_info"
+    },
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "t:labels.headline"
+    }
+  ],
+  "blocks": [
+    { "type": "simple-page-item" },
+    { "type": "warranty-notice" },
+    { "type": "withdrawal-form" }
+  ],
+  "presets": [
+    {
+      "name": "t:general.simple_page",
+      "blocks": [
+        { "type": "simple-page-item" }
+      ]
+    }
+  ],
+  "enabled_on": {
+    "templates": ["page"]
+  }
+}
+{% endschema %}

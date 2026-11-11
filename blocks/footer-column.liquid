@@ -1,0 +1,83 @@
+{% doc %}
+  Renders a single column of footer links, driven by a merchant-chosen menu.
+
+  @example
+  {% content_for 'block', type: 'footer-column', id: 'footer-column' %}
+{% enddoc %}
+
+{% comment %}
+  Always render the column, even without a menu assigned yet, so the
+  four-column grid (copyright + 3 columns) stays intact while editing.
+{% endcomment %}
+<ul class="footer-column" role="list" {{ block.shopify_attributes }}>
+  {% for link in block.settings.menu.links %}
+    <li>
+      <a
+        href="{{ link.url }}"
+        class="footer-column__link{% if link.url == request.path %} is-active{% endif %}"
+      >
+        {{ link.title }}
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+
+{% stylesheet %}
+  .footer-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    list-style: none;
+    padding: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  /* A square bullet marks the current page — same convention as the
+     header-menu/page-submenu/collection-nav links. */
+  .footer-column__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .footer-column__link.is-active {
+    gap: var(--space-6);
+  }
+
+  .footer-column__link::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .footer-column__link.is-active::before {
+    width: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .footer-column__link:hover {
+      opacity: 0.7;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.footer_column",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "t:labels.menu"
+    }
+  ],
+  "presets": [{ "name": "t:general.footer_column" }]
+}
+{% endschema %}

@@ -1,0 +1,98 @@
+<div class="simple-page-item" {{ block.shopify_attributes }}>
+  {% if block.settings.heading != blank %}
+    <p class="simple-page-item__heading">{{ block.settings.heading }}</p>
+  {% endif %}
+
+  {% if block.settings.body != blank %}
+    <div class="simple-page-item__body rte">{{ block.settings.body }}</div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .simple-page-item {
+    display: flex;
+    flex-direction: column;
+    /* Same 32px as the gap between separate blocks (see
+       .simple-page-content in sections/simple-page.liquid), so the
+       whole page reads as one uniform vertical rhythm. */
+    gap: var(--space-32);
+  }
+
+  .simple-page-item__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .simple-page-item__body {
+    margin: 0;
+  }
+
+  .simple-page-item__body p {
+    margin-bottom: var(--space-16);
+  }
+
+  .simple-page-item__body p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* A merchant pasting a large block of legal text can end up with
+     single <br> line breaks instead of real <p> tags (depending on
+     the source and how it's pasted) — same issue as Shopify's own
+     auto-generated policy text (see sections/policy-page.liquid).
+     Giving every line break its own block-level gap is the fallback
+     for when that happens, since the real fix (using Enter, not
+     Shift+Enter, for each paragraph in the editor) is on the content
+     side, not something CSS alone can guarantee. */
+  .simple-page-item__body br {
+    display: block;
+    content: '';
+    margin-bottom: var(--space-8);
+  }
+
+  /* Flush with the rest of the text (no browser-default list indent)
+     — square bullets matching the dots used elsewhere in the theme,
+     same treatment as .product-accordion__content in
+     sections/product.liquid. */
+  .simple-page-item__body ul,
+  .simple-page-item__body ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .simple-page-item__body ul li {
+    position: relative;
+    padding-left: calc(4px + var(--space-6));
+  }
+
+  .simple-page-item__body ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 4px;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.simple_page_item",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Headline"
+    },
+    {
+      "type": "richtext",
+      "id": "body",
+      "label": "t:labels.text"
+    }
+  ],
+  "presets": [{ "name": "t:general.simple_page_item" }]
+}
+{% endschema %}

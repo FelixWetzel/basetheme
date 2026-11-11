@@ -1,0 +1,62 @@
+{% comment %}
+  Default page template — a safety net for pages created in the admin
+  without picking one of the dedicated templates. Same layout as the
+  policy pages (see sections/policy-page.liquid): versal headline,
+  then the page content below it.
+{% endcomment %}
+
+<div class="default-page full-width">
+  <h1 class="default-page__headline">{{ page.title }}</h1>
+
+  <div class="default-page__content rte">
+    {{ page.content }}
+  </div>
+</div>
+
+{% stylesheet %}
+  .default-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+    padding: var(--space-16) var(--page-margin) var(--space-96);
+  }
+
+  .default-page__headline {
+    margin: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .default-page__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    max-width: 40rem;
+  }
+
+  .default-page__content > * {
+    margin: 0;
+  }
+
+  .default-page__content :is(h1, h2, h3, h4, h5, h6) {
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .default-page__content img {
+    max-width: 100%;
+    height: auto;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.page",
+  "settings": [],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

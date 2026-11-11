@@ -1,0 +1,33 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "current": {
+    "min_page_margin_mobile": 12,
+    "newsletter_popup_enabled": true,
+    "newsletter_popup_text": "Melde dich an und spare 10 % auf deine erste Bestellung. Keine Sorge, wir schreiben nur, wenn es wirklich etwas zu erzählen gibt.",
+    "newsletter_popup_success_text": "Nach deiner Bestätigung erhältst du Neuigkeiten von uns per E-Mail. In deiner Willkommens-Mail findest du einen Rabattcode für deine erste Bestellung. Schau bitte auch in deinem Spam-Ordner nach, falls sie nicht in deinem Posteingang ankommt.",
+    "newsletter_popup_delay": 10,
+    "foreground_color": "#282828",
+    "header_opacity": 100,
+    "drawer_opacity": 100,
+    "quick_add_behavior": "feedback",
+    "logo_intro_all_pages": true,
+    "screensaver_enabled": true,
+    "screensaver_delay": 20,
+    "screensaver_video_opacity": 100,
+    "screensaver_logo_color": "light",
+    "free_shipping_threshold": 70,
+    "free_shipping_line": false,
+    "empty_cart_recommendations_heading": "Favoriten",
+    "sold_out_newsletter_text": "Zum Newsletter anmelden und nichts verpassen",
+    "show_collection_filter": true,
+    "content_for_index": []
+  }
+}

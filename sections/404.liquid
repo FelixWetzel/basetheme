@@ -1,0 +1,81 @@
+{% comment %}
+  404 page: shown when a visitor requests an invalid store URL.
+{% endcomment %}
+
+<div class="error-404 full-width">
+  <p class="error-404__eyebrow">404</p>
+  <p class="error-404__heading">{{ '404.title' | t }}</p>
+  <p class="error-404__description">{{ '404.not_found' | t }}</p>
+  <a href="{{ routes.all_products_collection_url }}" class="error-404__link">
+    {{ '404.back_to_shopping' | t }}
+  </a>
+</div>
+
+{% stylesheet %}
+  .error-404 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--space-16);
+    min-height: 60svh;
+    padding: var(--space-16) var(--page-margin);
+  }
+
+  .error-404__eyebrow {
+    margin: 0;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .error-404__heading {
+    margin: 0;
+    font-size: 1.625rem;
+    line-height: 1.75rem;
+    letter-spacing: 0.22px;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .error-404__description {
+    margin: 0;
+    max-width: 32rem;
+    color: var(--color-muted);
+  }
+
+  .error-404__link {
+    display: inline-block;
+    margin-top: var(--space-8);
+    padding: var(--space-16);
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .error-404__link:hover {
+      opacity: 0.9;
+    }
+  }
+
+  @media (min-width: 750px) {
+    .error-404__heading {
+      font-size: 2rem;
+      line-height: 2.125rem;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.404",
+  "settings": [],
+  "enabled_on": {
+    "templates": ["404"]
+  }
+}
+{% endschema %}

@@ -1,0 +1,938 @@
+{% doc %}
+  Renders the cart drawer (mini-cart), opened from the header's cart
+  button. Shows each line item with a thumbnail, variant and a remove
+  action, a delivery/subtotal summary, and a checkout button. Same
+  drawer/scrim treatment as the header menu.
+
+  @example
+  {% render 'cart-drawer' %}
+{% enddoc %}
+
+<dialog
+  id="cart-drawer"
+  class="cart-drawer"
+  scroll-lock
+  closedby="any"
+  data-refresh-url="{{ routes.root_url }}?section_id=header"
+>
+  <div class="cart-drawer__bar">
+    {% # Same "( n )" as the header's cart button — the font's "case"/"ss04" features turn these into the versal parentheses %}
+    <p class="cart-drawer__title">
+      {{ 'cart.title' | t }}
+      <span class="cart-drawer__count">( {{ cart.item_count }} )</span>
+    </p>
+    <button type="button" class="cart-drawer__close" data-drawer-close>
+      {{ 'general.header.close' | t }}
+    </button>
+  </div>
+
+  {% if cart.item_count > 0 %}
+    {% form 'cart', cart, class: 'cart-drawer__form' %}
+      <div class="cart-drawer__items">
+        {% for item in cart.items %}
+          {% liquid
+            assign item_gallery = item.variant.metafields.custom.gallery.value
+            assign item_image = null
+            for file in item_gallery
+              assign item_image = file.preview_image
+              break
+            endfor
+            unless item_image
+              assign item_image = item.variant.featured_image | default: item.image
+            endunless
+          %}
+          <div class="cart-drawer__item" data-drawer-fade="subtle">
+            <div class="cart-drawer__item-thumbnail">
+              {% if item_image %}
+                <img
+                  src="{{ item_image | image_url: width: 200 }}"
+                  srcset="
+                    {{ item_image | image_url: width: 200 }} 1x,
+                    {{ item_image | image_url: width: 400 }} 2x
+                  "
+                  alt="{{ item_image.alt | default: item.title | escape }}"
+                  loading="lazy"
+                  width="{{ item_image.width }}"
+                  height="{{ item_image.height }}"
+                >
+              {% endif %}
+            </div>
+
+            <div class="cart-drawer__item-details">
+              <div class="cart-drawer__item-info">
+                <p class="cart-drawer__item-title">{{ item.product.title }}</p>
+                {% if item.variant.title != 'Default Title' %}
+                  <p class="cart-drawer__item-variant">{{ item.variant.title }}</p>
+                {% endif %}
+              </div>
+
+              <div class="cart-drawer__stepper" data-cart-stepper data-line="{{ forloop.index }}">
+                <button
+                  type="button"
+                  class="cart-drawer__stepper-btn"
+                  data-cart-stepper-decrease
+                  data-change-url="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | minus: 1 }}"
+                  aria-label="{{ 'cart.decrease_quantity' | t }}"
+                >&minus;</button>
+                <span class="cart-drawer__stepper-qty">{{ item.quantity }}</span>
+                <button
+                  type="button"
+                  class="cart-drawer__stepper-btn"
+                  data-cart-stepper-increase
+                  data-change-url="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | plus: 1 }}"
+                  aria-label="{{ 'cart.increase_quantity' | t }}"
+                ><span class="icon-plus" aria-hidden="true"></span></button>
+              </div>
+            </div>
+
+            <p class="cart-drawer__item-price">{{ item.final_line_price | divided_by: 100 }} €</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% comment %}
+        "Passt dazu": the cart items' hand-picked variants and products,
+        rendered right here when there are at least three to show;
+        otherwise the JS below fetches sections/cart-recommendations.liquid
+        into the slot, which tops them up with Shopify's automatic
+        recommendations for the first cart item.
+      {% endcomment %}
+      {% if settings.cart_recommendations %}
+        {% liquid
+          capture hand_picked_html
+            render 'cart-recommendations'
+          endcapture
+          # Cache key for the fetched version: the colours shown depend on the variants in the cart.
+          assign cart_variant_ids = cart.items | map: 'variant_id' | join: ','
+        %}
+        <div
+          class="cart-drawer__recommendations" data-drawer-fade="subtle"
+          {% unless hand_picked_html contains 'data-cart-recommendations-full' %}
+            data-cart-recommendations-url="{{ routes.product_recommendations_url }}?section_id=cart-recommendations&product_id={{ cart.items.last.product_id }}&limit=10&intent=related"
+            data-cart-recommendations-key="{{ cart_variant_ids }}"
+          {% endunless %}
+        >
+          {% if hand_picked_html contains 'data-cart-recommendations-full' %}
+            {{ hand_picked_html }}
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% comment %}
+        The EU legal guarantee notice (snippets/warranty-notice.liquid),
+        available before checkout as a plain link that opens the
+        official graphic in the warranty dialog below (the href is the
+        no-JS fallback).
+      {% endcomment %}
+      <a
+        href="{{ 'gewaehrleistungslabel-de.png' | asset_url }}"
+        class="cart-drawer__warranty" data-drawer-fade="subtle"
+        data-warranty-open
+      >
+        {{- 'cart.warranty' | t -}}
+      </a>
+
+      <div class="cart-drawer__summary" data-drawer-fade="subtle">
+        {% if settings.free_shipping_line and settings.free_shipping_line_text != blank %}
+          <p class="cart-drawer__shipping-line">{{ settings.free_shipping_line_text | escape }}</p>
+        {% elsif settings.free_shipping_threshold > 0 %}
+          {% liquid
+            assign threshold_cents = settings.free_shipping_threshold | times: 100
+            assign remaining_cents = threshold_cents | minus: cart.total_price
+            assign remaining_euros = remaining_cents | divided_by: 100.0 | ceil
+            assign shipping_progress = cart.total_price | times: 100 | divided_by: threshold_cents
+            if shipping_progress > 100
+              assign shipping_progress = 100
+            endif
+          %}
+          <div class="cart-drawer__shipping-progress">
+            <p>
+              {%- if remaining_cents > 0 -%}
+                {{- 'cart.free_shipping_remaining' | t: amount: remaining_euros -}}
+              {%- else -%}
+                {{- 'cart.free_shipping_reached' | t -}}
+              {%- endif -%}
+            </p>
+            <div
+              class="cart-drawer__shipping-bar"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="{{ shipping_progress }}"
+            >
+              <span style="--progress: {{ shipping_progress }}%;"></span>
+            </div>
+          </div>
+        {% endif %}
+
+        {% # The subtotal sits right-aligned in the checkout button instead of its own row %}
+        <button type="submit" name="checkout" class="cart-drawer__checkout">
+          <span>{{ 'cart.checkout' | t }}</span>
+          <span>{{ cart.total_price | divided_by: 100 }} €</span>
+        </button>
+      </div>
+    {% endform %}
+  {% else %}
+    {% comment %}
+      Empty cart: the "empty" notice and "Alle Produkte ansehen", and
+      right below them a few products to start with — those picked in the theme settings (up to 6, in that
+      order), otherwise the 4 newest — in the same carousel as the
+      "Passt dazu" recommendations.
+    {% endcomment %}
+    <div class="cart-drawer__empty-state">
+      <div class="cart-drawer__empty" data-drawer-fade="subtle">
+        <p>{{ 'cart.empty' | t }}</p>
+        <a href="{{ routes.all_products_collection_url }}" class="cart-drawer__empty-link">
+          {{ 'cart.view_all_products' | t }}
+        </a>
+      </div>
+
+      {% if settings.empty_cart_recommendations %}
+        {% liquid
+          if settings.empty_cart_recommendations_products.size > 0
+            assign empty_cart_products = settings.empty_cart_recommendations_products
+            assign empty_cart_limit = 6
+          else
+            assign empty_cart_products = collections.all.products | sort: 'created_at' | reverse
+            assign empty_cart_limit = 4
+          endif
+        %}
+        <div class="cart-drawer__recommendations cart-drawer__recommendations--empty" data-drawer-fade="subtle">
+          {% render 'cart-recommendations',
+            fallback_products: empty_cart_products,
+            heading: settings.empty_cart_recommendations_heading,
+            limit: empty_cart_limit
+          %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</dialog>
+
+{% comment %}
+  The guarantee graphic, centered over the same halftone scrim as the
+  product zoom but fitted to the viewport instead of enlarged. Lives
+  outside the drawer since refresh() replaces the drawer's innerHTML.
+{% endcomment %}
+<dialog class="warranty-dialog" data-warranty-dialog closedby="any" aria-label="{{ 'cart.warranty' | t }}">
+  <div class="warranty-dialog__frame">
+    {% render 'warranty-notice' %}
+    <button type="button" class="warranty-dialog__close" data-warranty-close>
+      {{ 'general.header.close' | t }}
+    </button>
+  </div>
+</dialog>
+
+{% stylesheet %}
+  .cart-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: 100%;
+    max-width: 27.5rem;
+    height: 100%;
+    max-height: 100%;
+    border: none;
+    padding: 0;
+    overflow-y: auto;
+    background-color: var(--color-drawer-background);
+    color: var(--color-foreground);
+    flex-direction: column;
+    translate: 100% 0;
+  }
+
+  /* Gets focus back when the warranty dialog closes — no browser
+     focus ring around the whole drawer. */
+  .cart-drawer:focus,
+  .cart-drawer:focus-visible {
+    outline: none;
+  }
+
+  @media (max-width: 749px) {
+    .cart-drawer {
+      width: 85%;
+      max-width: none;
+    }
+  }
+
+  /* Only apply flex display while the dialog is actually open —
+     setting `display` unconditionally would override the browser's
+     own `dialog:not([open]) { display: none; }` rule and leave the
+     closed dialog visible. */
+  .cart-drawer[open] {
+    display: flex;
+    translate: 0 0;
+    transition:
+      translate 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  /* Starting point for the open transition — without this the
+     dialog would just appear already on-screen, since a transition
+     only runs between two rendered states. */
+  @starting-style {
+    .cart-drawer[open] {
+      translate: 100% 0;
+    }
+  }
+
+  /* Set by JS the instant closing starts (see below) instead of
+     relying on the CSS-only allow-discrete/overlay mechanism (which
+     isn't reliable in every Safari version for keeping display: flex
+     alive until a close transition finishes) — JS drives the
+     slide-out instead and only calls the real .close() once it's
+     visually done. [open] is still present the whole time (that's
+     the point), so this needs to win over the [open] rule above:
+     same specificity, so it must come after it here in the file. */
+  .cart-drawer.is-closing {
+    translate: 100% 0;
+    transition: translate 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .cart-drawer::backdrop {
+    /* Same halftone scrim as the header menu drawer — two staggered
+       layers of a tiny square tile. */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+    opacity: 0;
+    transition:
+      opacity 0.8s cubic-bezier(0.65, 0, 0.35, 1),
+      display 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete,
+      overlay 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete;
+  }
+
+  .cart-drawer[open]::backdrop {
+    opacity: 1;
+    transition:
+      opacity 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  @starting-style {
+    .cart-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* Set by JS in lockstep with the box's own is-closing rule above,
+     so the scrim fades out over the same 0.6s instead of only
+     starting once .close() actually runs (which, since that's now
+     deliberately delayed until the slide-out finishes, would
+     otherwise make the scrim linger for its own full transition on
+     top of the box's). A plain CSS transition on ::backdrop like this
+     is reliable — it's specifically animating it imperatively via
+     JS (Element.animate with a pseudoElement option) that has known
+     Safari glitches. */
+  .cart-drawer.is-closing::backdrop {
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .cart-drawer__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-16) var(--page-margin);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .cart-drawer__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .cart-drawer__count {
+    margin-left: var(--space-8);
+  }
+
+  .cart-drawer__close {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-drawer__close:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .cart-drawer__close:focus-visible {
+    outline: none;
+  }
+
+  .cart-drawer__form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 0;
+    min-height: 0;
+  }
+
+  .cart-drawer__items {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 0 var(--space-16);
+    overflow-y: auto;
+  }
+
+  /* The thumbnail bleeds to the drawer's true left edge and (via the
+     items list having no top padding) up to the bar's own border —
+     the item's own padding only applies to its right side, plus a
+     gray separator line below every item, including the last, running
+     the drawer's full width. */
+  .cart-drawer__item {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-12);
+    padding-right: var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cart-drawer__item-thumbnail {
+    flex-shrink: 0;
+    width: 100px;
+    height: 125px;
+    overflow: hidden;
+  }
+
+  .cart-drawer__item-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cart-drawer__item-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex: 1 0 0;
+    min-width: 0;
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  .cart-drawer__item-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-drawer__item-title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .cart-drawer__item-variant {
+    margin: 0;
+    color: var(--color-foreground);
+  }
+
+  .cart-drawer__stepper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .cart-drawer__stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    line-height: 1;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .cart-drawer__stepper-btn[data-cart-stepper-decrease] {
+    justify-content: flex-start;
+  }
+
+  .cart-drawer__stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-drawer__stepper-btn:not(:disabled):hover {
+      opacity: 0.7;
+    }
+  }
+
+  .cart-drawer__stepper-qty {
+    min-width: 1em;
+    text-align: center;
+  }
+
+  .cart-drawer__item-price {
+    flex-shrink: 0;
+    margin: 0;
+    padding-top: var(--space-12);
+    text-align: right;
+  }
+
+  .cart-drawer__summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding: var(--space-16);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .cart-drawer__shipping-progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .cart-drawer__shipping-progress p,
+  .cart-drawer__shipping-line {
+    margin: 0;
+  }
+
+  .cart-drawer__shipping-bar {
+    height: 2px;
+    background-color: var(--color-border);
+  }
+
+  .cart-drawer__shipping-bar span {
+    display: block;
+    width: var(--progress);
+    height: 100%;
+    background-color: var(--color-foreground);
+  }
+
+  /* Docked right above the warranty link (outside the scrolling item
+     list). */
+  .cart-drawer__recommendations {
+    flex-shrink: 0;
+  }
+
+  .cart-drawer__recommendations:empty {
+    display: none;
+  }
+
+  /* Empty cart: right below the "Alle Produkte" block, with a line above */
+  .cart-drawer__recommendations--empty {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cart-drawer__checkout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+    width: 100%;
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-drawer__checkout:hover {
+      opacity: 0.9;
+    }
+  }
+
+  /* Sits between the item list and the summary's top border, pinned
+     there while the list scrolls — on its own background strip with
+     16px above the text, so the scrolling list is cut off cleanly
+     above it instead of running right up against the text. */
+  .cart-drawer__warranty {
+    flex-shrink: 0;
+    align-self: stretch;
+    margin: 0;
+    padding: var(--space-16) var(--space-16) var(--space-12);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    text-decoration: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-drawer__warranty:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .warranty-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: var(--space-16);
+    border: none;
+    /* Same halftone scrim as the product zoom (sections/product.liquid). */
+    background-color: transparent;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+  }
+
+  .warranty-dialog::backdrop {
+    background: transparent;
+  }
+
+  .warranty-dialog[open] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Grid so the close button shares the image's cell and overlays
+     its top-right corner, like the product zoom's. */
+  .warranty-dialog__frame {
+    display: grid;
+    max-height: 100%;
+  }
+
+  /* Scaled down proportionally to fit the viewport — the notice may
+     never be cropped. */
+  .warranty-dialog .warranty-notice-image {
+    grid-area: 1 / 1;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 2 * var(--space-16));
+    max-height: calc(100dvh - 2 * var(--space-16));
+  }
+
+  .warranty-dialog__close {
+    grid-area: 1 / 1;
+    justify-self: end;
+    align-self: start;
+    margin: var(--space-16);
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  /* Receives focus automatically when the dialog opens — opts out of
+     the global focus ring like the drawers' close buttons. */
+  .warranty-dialog__close:focus-visible {
+    outline: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .warranty-dialog__close:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .cart-drawer__empty-state {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+  }
+
+  .cart-drawer__empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding: var(--space-16);
+    color: var(--color-foreground);
+  }
+
+  .cart-drawer__empty p {
+    margin: 0;
+  }
+
+
+  .cart-drawer__empty-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--space-16);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-drawer__empty-link:hover {
+      opacity: 0.9;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const drawer = document.getElementById('cart-drawer');
+    if (!drawer) return;
+
+    // Re-fetches the header section (cart drawer + cart count live
+    // inside it) and swaps in just those two parts, so the drawer's
+    // own open/closed state and the rest of the header are untouched.
+    // The drawer is only re-rendered when its content actually
+    // changed: re-rendering recreates every image, which then has to
+    // be decoded again (visible stutter if the drawer is animating).
+    let renderedHtml = drawer.innerHTML;
+    const refresh = () =>
+      fetch(drawer.dataset.refreshUrl)
+        .then((response) => response.text())
+        .then((html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+
+          const newDrawer = doc.getElementById('cart-drawer');
+          if (newDrawer && newDrawer.innerHTML !== renderedHtml) {
+            renderedHtml = newDrawer.innerHTML;
+            drawer.innerHTML = renderedHtml;
+          }
+
+          const newCartButton = doc.querySelector('.header__cart');
+          const cartButton = document.querySelector('.header__cart');
+          if (newCartButton && cartButton && cartButton.innerHTML !== newCartButton.innerHTML) {
+            cartButton.innerHTML = newCartButton.innerHTML;
+          }
+
+          loadRecommendations();
+        });
+
+    // Fills the recommendations slot with Shopify's automatic
+    // recommendations (when the newest item has no hand-picked ones).
+    // Cached per newest product + cart contents, so reopening the
+    // drawer or changing a quantity doesn't refetch or flash, and
+    // prefetched when the cart button is hovered/touched, so they're
+    // usually there the moment the drawer opens. A slot already
+    // showing the right ones is left alone.
+    const recommendationsCache = new Map();
+    const recommendationsSlot = () => drawer.querySelector('[data-cart-recommendations-url]');
+    const recommendationsKey = (slot) => `${slot.dataset.cartRecommendationsUrl}|${slot.dataset.cartRecommendationsKey}`;
+
+    const fetchRecommendations = (slot) => {
+      const key = recommendationsKey(slot);
+      if (!recommendationsCache.has(key)) {
+        recommendationsCache.set(
+          key,
+          fetch(slot.dataset.cartRecommendationsUrl)
+            .then((response) => response.text())
+            .catch(() => {
+              recommendationsCache.delete(key);
+              return '';
+            })
+        );
+      }
+      return recommendationsCache.get(key);
+    };
+
+    const loadRecommendations = () => {
+      const slot = recommendationsSlot();
+      if (!slot) return;
+      const key = recommendationsKey(slot);
+      if (slot.dataset.filledKey === key) return;
+
+      fetchRecommendations(slot).then((html) => {
+        if (!html || recommendationsSlot() !== slot || slot.dataset.filledKey === key) return;
+        const content = new DOMParser().parseFromString(html, 'text/html').querySelector('.cart-recommendations');
+        slot.replaceChildren(...(content ? [content] : []));
+        slot.dataset.filledKey = key;
+      });
+    };
+
+    const prefetchRecommendations = () => {
+      const slot = recommendationsSlot();
+      if (slot) fetchRecommendations(slot);
+    };
+    document.querySelectorAll('.header__cart').forEach((button) => {
+      ['pointerenter', 'touchstart', 'focus'].forEach((type) =>
+        button.addEventListener(type, prefetchRecommendations, { once: true, passive: true })
+      );
+    });
+
+    // Recommendations carousel: dots scroll to their product, and the
+    // active dot follows the scroll position (scroll doesn't bubble, so
+    // listened for in the capture phase — the track is replaced on
+    // every refresh).
+    drawer.addEventListener('click', (event) => {
+      const dot = event.target.closest('[data-cart-recommendations-dot]');
+      if (!dot) return;
+      const track = drawer.querySelector('[data-cart-recommendations-track]');
+      const slide = track?.children[Number(dot.dataset.cartRecommendationsDot)];
+      if (!slide) return;
+      track.scrollTo({ left: slide.offsetLeft - track.firstElementChild.offsetLeft, behavior: 'smooth' });
+    });
+
+    drawer.addEventListener(
+      'scroll',
+      (event) => {
+        const track = event.target;
+        if (!(track instanceof Element) || !track.matches('[data-cart-recommendations-track]')) return;
+        const slideWidth = track.firstElementChild?.getBoundingClientRect().width;
+        if (!slideWidth) return;
+        const atEnd = track.scrollLeft >= track.scrollWidth - track.clientWidth - 1;
+        const index = atEnd ? track.children.length - 1 : Math.round(track.scrollLeft / slideWidth);
+        drawer.querySelectorAll('[data-cart-recommendations-dot]').forEach((dot, dotIndex) => {
+          dot.classList.toggle('is-active', dotIndex === index);
+        });
+      },
+      true,
+    );
+
+    // "Add" on a recommendation: adds one of its first available
+    // variant, then refreshes the drawer (the product moves up into the
+    // cart and drops out of the recommendations).
+    drawer.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-cart-add]');
+      if (!button) return;
+      button.disabled = true;
+      fetch(`${window.Shopify?.routes?.root || '/'}cart/add.js`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ items: [{ id: Number(button.dataset.variantId), quantity: 1 }] }),
+      })
+        .then(() => refresh())
+        .catch(() => (button.disabled = false));
+    });
+
+    window.ThemeCart = {
+      refresh,
+      open: () => {
+        // If a close fade is still finishing up (see
+        // closeDrawerAnimated below), .showModal() would throw since
+        // the dialog is technically still open for as long as that
+        // takes — finish it instantly first.
+        if (drawer.classList.contains('is-closing')) {
+          drawer.classList.remove('is-closing');
+          if (drawer.open) drawer.close();
+        }
+
+        return refresh().then(() => drawer.showModal());
+      },
+      // Opens right away with the content already on the page (the
+      // cart button) — open() above waits for a refresh first, which
+      // is only needed right after adding something. Checks back with
+      // the server once the drawer has finished sliding in.
+      show: () => {
+        if (drawer.classList.contains('is-closing')) {
+          drawer.classList.remove('is-closing');
+          if (drawer.open) drawer.close();
+        }
+
+        loadRecommendations();
+        drawer.showModal();
+        setTimeout(() => {
+          if (drawer.open) refresh();
+        }, 450);
+      },
+    };
+
+    // Quantity stepper — decreasing from 1 sets quantity to 0, which
+    // removes the line the same way the old "remove" link did, so no
+    // separate remove control is needed.
+    drawer.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-cart-stepper-decrease], [data-cart-stepper-increase]');
+      if (!button) return;
+      button.disabled = true;
+      fetch(button.dataset.changeUrl, { headers: { Accept: 'application/json' } }).then(() => refresh());
+    });
+
+    const closeDrawerAnimated = () => {
+      if (drawer.classList.contains('is-closing')) return;
+      drawer.classList.add('is-closing');
+    };
+
+    // The is-closing class (above) starts the slide-out; once it
+    // finishes, actually close the dialog (removing [open], which is
+    // what takes it out of the top layer for real). Guarded to the
+    // box's own translate transition specifically (not the
+    // ::backdrop's separate opacity one, which fires its own
+    // transitionend on the same element).
+    drawer.addEventListener('transitionend', (event) => {
+      if (
+        event.target === drawer &&
+        event.propertyName === 'translate' &&
+        !event.pseudoElement &&
+        drawer.classList.contains('is-closing')
+      ) {
+        drawer.classList.remove('is-closing');
+        drawer.close();
+      }
+    });
+
+    // Escape key and native light-dismiss (closedby="any") both fire
+    // this cancelable event before closing — pre-empt it to animate
+    // first instead of closing instantly.
+    drawer.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeDrawerAnimated();
+    });
+
+    drawer.addEventListener('click', (event) => {
+      // A click lands directly on the <dialog> element itself only
+      // when it hits the backdrop, never when it hits something
+      // inside it.
+      if (event.target === drawer) {
+        closeDrawerAnimated();
+        return;
+      }
+
+      // Delegated (not a direct listener on the button) since the
+      // close button is replaced whenever refresh() swaps in new
+      // innerHTML.
+      if (event.target.closest('[data-drawer-close]')) closeDrawerAnimated();
+
+      // Opens on top of the drawer, which stays open underneath.
+      if (event.target.closest('[data-warranty-open]') && warrantyDialog) {
+        event.preventDefault();
+        warrantyDialog.showModal();
+      }
+    });
+
+    // Like the product zoom: clicking the scrim, the graphic or the
+    // close button closes it.
+    const warrantyDialog = document.querySelector('[data-warranty-dialog]');
+    warrantyDialog?.addEventListener('click', () => warrantyDialog.close());
+  })();
+{% endjavascript %}

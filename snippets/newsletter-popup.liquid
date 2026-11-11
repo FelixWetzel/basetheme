@@ -1,0 +1,434 @@
+{% doc %}
+  Renders the newsletter signup popup: a centered dialog, using
+  Shopify's native customer form — no app required. Submitting it
+  creates a marketing-subscribed customer tagged "newsletter", which
+  Shopify Email can then send campaigns to.
+
+  The dialog itself is always rendered so it can always be opened
+  manually — e.g. any link with href="#newsletter-popup" (usable from
+  a footer menu) opens it. The "Enable newsletter popup" theme setting
+  only controls whether it *also* opens itself automatically after a
+  delay (remembered per browser via localStorage, so that only
+  happens once).
+
+  @example
+  {% render 'newsletter-popup' %}
+{% enddoc %}
+
+<dialog
+  id="newsletter-popup"
+  class="newsletter-popup"
+  closedby="any"
+  data-auto-show="{{ settings.newsletter_popup_enabled }}"
+  data-delay="{{ settings.newsletter_popup_delay | default: 5 }}"
+>
+  {% if settings.newsletter_popup_image != blank %}
+    <div class="newsletter-popup__media">
+      <img
+        src="{{ settings.newsletter_popup_image | image_url: width: 900 }}"
+        srcset="
+          {{ settings.newsletter_popup_image | image_url: width: 900 }} 1x,
+          {{ settings.newsletter_popup_image | image_url: width: 1800 }} 2x
+        "
+        alt=""
+        loading="lazy"
+        width="{{ settings.newsletter_popup_image.width }}"
+        height="{{ settings.newsletter_popup_image.height }}"
+      >
+    </div>
+  {% endif %}
+
+  {% form 'customer', id: 'newsletter-popup-form', class: 'newsletter-popup__form' %}
+    <input type="hidden" name="contact[tags]" value="newsletter">
+
+    {% if form.posted_successfully? %}
+      <input type="hidden" data-newsletter-success value="true">
+      <div class="newsletter-popup__intro">
+        <div class="newsletter-popup__bar">
+          {%- liquid
+            assign success_heading = settings.newsletter_popup_success_heading
+            if success_heading == blank
+              assign success_heading = 'general.newsletter.success_heading' | t
+            endif
+            assign success_text = settings.newsletter_popup_success_text
+            if success_text == blank
+              assign success_text = 'general.newsletter.success_text' | t
+            endif
+          -%}
+          <p class="newsletter-popup__heading">{{ success_heading }}</p>
+          <button type="button" class="newsletter-popup__close" command="close" commandfor="newsletter-popup">
+            {{ 'general.header.close' | t }}
+          </button>
+        </div>
+        <p class="newsletter-popup__text">{{ success_text | newline_to_br }}</p>
+      </div>
+    {% else %}
+      <div class="newsletter-popup__intro">
+        <div class="newsletter-popup__bar">
+          <p class="newsletter-popup__heading">{{ settings.newsletter_popup_heading }}</p>
+          <button type="button" class="newsletter-popup__close" command="close" commandfor="newsletter-popup">
+            {{ 'general.header.close' | t }}
+          </button>
+        </div>
+
+        {% if settings.newsletter_popup_text != blank %}
+          <p class="newsletter-popup__text">{{ settings.newsletter_popup_text | newline_to_br }}</p>
+        {% endif %}
+      </div>
+
+      <div class="newsletter-popup__actions">
+        {% if form.errors %}
+          <p class="newsletter-popup__error">{{ form.errors.messages['email'] }}</p>
+        {% endif %}
+
+        <div class="newsletter-popup__field">
+          <input
+            type="email"
+            name="contact[email]"
+            class="newsletter-popup__input"
+            aria-label="{{ 'general.newsletter.placeholder' | t }}"
+            autocorrect="off"
+            autocapitalize="off"
+            autocomplete="email"
+            required
+            data-newsletter-input
+          >
+          <span class="newsletter-popup__placeholder" aria-hidden="true" data-newsletter-placeholder>
+            {{ 'general.newsletter.placeholder' | t }}<span class="newsletter-popup__cursor">|</span>
+          </span>
+        </div>
+
+        <button type="submit" class="newsletter-popup__submit">
+          {{ 'general.newsletter.submit' | t }}
+        </button>
+      </div>
+    {% endif %}
+  {% endform %}
+</dialog>
+
+{% stylesheet %}
+  .newsletter-popup {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: calc(100% - var(--page-margin) * 2);
+    max-width: 26rem;
+    max-height: calc(100% - var(--page-margin) * 2);
+    height: fit-content;
+    padding: 0;
+    border: none;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    opacity: 0;
+    transition:
+      opacity 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  .newsletter-popup[open] {
+    opacity: 1;
+  }
+
+  /* With an image the popup splits vertically: image on the left,
+     form on the right, each half as wide as the image-less popup.
+     The height is fixed rather than fit-content — as a grid, the
+     dialog otherwise stretches to its full max-height — and caps
+     how tall the image gets. */
+  @media (min-width: 750px) {
+    .newsletter-popup[open]:has(.newsletter-popup__media) {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr);
+      max-width: 52rem;
+      height: min(30rem, 100% - var(--page-margin) * 2);
+    }
+
+    /* Heading and text stay at the top, field and button sit at the
+       bottom; the form scrolls if the viewport is too short. */
+    .newsletter-popup:has(.newsletter-popup__media) .newsletter-popup__form {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    /* margin-top rather than the form's justify-content, so anything
+       Shopify appends to the form can't pull the field off the bottom. */
+    .newsletter-popup:has(.newsletter-popup__media) .newsletter-popup__actions {
+      margin-top: auto;
+    }
+  }
+
+  /* Absolutely positioned so the image never sets the popup's size —
+     it just fills its half, cropped to fit. */
+  .newsletter-popup__media {
+    position: relative;
+  }
+
+  .newsletter-popup__media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Mobile: no room side by side — the image sits on top, capped in
+     height, with the form below it as in the image-less popup. */
+  @media (max-width: 749px) {
+    .newsletter-popup__media {
+      aspect-ratio: 3 / 2;
+      max-height: 35vh;
+      width: 100%;
+    }
+  }
+
+  .newsletter-popup::backdrop {
+    /* Same halftone scrim as the header menu drawer (see
+       sections/header.liquid). */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+    opacity: 0;
+    transition:
+      opacity 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  .newsletter-popup[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .newsletter-popup[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .newsletter-popup__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-96);
+    padding: var(--space-16);
+  }
+
+  .newsletter-popup__intro,
+  .newsletter-popup__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .newsletter-popup__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+  }
+
+  .newsletter-popup__close {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  /* Receives focus automatically when the popup opens — see the
+     keyboard focus rule in critical.css. */
+  .newsletter-popup__close:focus-visible {
+    outline: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .newsletter-popup__close:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .newsletter-popup__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .newsletter-popup__text {
+    margin: 0;
+  }
+
+  .newsletter-popup__error {
+    margin: 0;
+    color: var(--color-foreground);
+  }
+
+  .newsletter-popup__field {
+    position: relative;
+  }
+
+  .newsletter-popup__input {
+    width: 100%;
+    padding: var(--space-16);
+    border: 1px solid var(--color-foreground);
+    background: none;
+    font: inherit;
+    color: var(--color-foreground);
+    outline: none;
+  }
+
+  /* Decorative — hidden via JS once the field is focused or has a
+     value, so it never fights the real typed text or native caret.
+     A custom overlay rather than ::placeholder so the blinking
+     cursor can sit right after the placeholder text, not float at
+     the start of the field. */
+  .newsletter-popup__placeholder {
+    position: absolute;
+    left: var(--space-16);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    color: var(--color-foreground);
+    font: inherit;
+  }
+
+  /* The JS toggles the native `hidden` attribute, but the `display:
+     flex` above outranks the browser's own `[hidden] { display: none }`
+     UA rule (same specificity, author origin wins) — without this,
+     the placeholder never actually disappears. */
+  .newsletter-popup__placeholder[hidden] {
+    display: none;
+  }
+
+  .newsletter-popup__cursor {
+    margin-left: 0.15em;
+    animation: newsletter-popup-blink 1s step-end infinite;
+  }
+
+  @keyframes newsletter-popup-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .newsletter-popup__cursor {
+      animation: none;
+    }
+  }
+
+  .newsletter-popup__submit {
+    display: flex;
+    justify-content: flex-start;
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .newsletter-popup__submit:hover {
+      opacity: 0.9;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const dialog = document.getElementById('newsletter-popup');
+    if (!dialog) return;
+
+    const STORAGE_KEY = 'theme-newsletter-dismissed';
+    const succeeded = dialog.querySelector('[data-newsletter-success]');
+
+    let alreadyHandled = false;
+    try {
+      alreadyHandled = localStorage.getItem(STORAGE_KEY) === '1';
+    } catch (error) {
+      alreadyHandled = false;
+    }
+
+    if (succeeded) {
+      // The page just reloaded back here after a successful submit —
+      // show the thank-you state immediately, regardless of delay.
+      dialog.showModal();
+      try {
+        localStorage.setItem(STORAGE_KEY, '1');
+      } catch (error) {
+        // Ignore (private browsing, storage disabled, etc.) — the
+        // popup just won't remember being dismissed this session.
+      }
+    } else if (dialog.dataset.autoShow === 'true' && !alreadyHandled) {
+      const delay = Number(dialog.dataset.delay || 5) * 1000;
+      window.setTimeout(() => {
+        if (!dialog.open) dialog.showModal();
+      }, delay);
+    }
+
+    // Lets any link anywhere in the theme open this popup instead of
+    // navigating, just by pointing it at "#newsletter-popup" — e.g.
+    // a "Newsletter" entry in a footer menu, which only ever outputs
+    // plain links (see blocks/footer-column.liquid), with no way to
+    // add a real command/commandfor button through the theme editor.
+    document.querySelectorAll('a[href="#newsletter-popup"]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        dialog.showModal();
+      });
+    });
+
+    dialog.addEventListener('close', () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, '1');
+      } catch (error) {
+        // Ignore.
+      }
+    });
+
+    // Clicking the backdrop (the dialog's own background, not its
+    // content) closes it — same pattern as the header menu drawer.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+
+    // The close button's command/commandfor attributes are a
+    // declarative fallback for browsers that support the Invoker
+    // Commands API — this JS handles it explicitly everywhere else.
+    dialog.querySelectorAll('.newsletter-popup__close').forEach((button) => {
+      button.addEventListener('click', () => dialog.close());
+    });
+
+    // The decorative placeholder + blinking cursor only show while
+    // the field is empty and unfocused — a "start typing here"
+    // affordance, not a permanent overlay.
+    const input = dialog.querySelector('[data-newsletter-input]');
+    const placeholder = dialog.querySelector('[data-newsletter-placeholder]');
+    if (input && placeholder) {
+      const updatePlaceholder = () => {
+        placeholder.hidden = document.activeElement === input || input.value.length > 0;
+      };
+      input.addEventListener('focus', updatePlaceholder);
+      input.addEventListener('blur', updatePlaceholder);
+      input.addEventListener('input', updatePlaceholder);
+      updatePlaceholder();
+    }
+  })();
+{% endjavascript %}

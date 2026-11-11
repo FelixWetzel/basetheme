@@ -1,0 +1,322 @@
+{% comment %}
+  Cart page: full list of items with quantity steppers and a checkout
+  summary, same visual language as the cart drawer
+  (snippets/cart-drawer.liquid) — for visitors who land on /cart
+  directly (e.g. an email link) instead of using the drawer.
+{% endcomment %}
+
+{% comment %}
+  The cart icon in Shopify's checkout header always links to /cart and
+  can't be changed from the theme — send those visitors to "Alle Produkte"
+  instead (the cart itself stays reachable via the drawer there).
+{% endcomment %}
+<script>
+  if (/\/checkouts?\//.test(document.referrer)) {
+    location.replace('{{ routes.collections_url }}/all');
+  }
+</script>
+
+<div class="cart-page full-width">
+  <p class="cart-page__title">{{ 'cart.title' | t }}</p>
+
+  {% if cart.item_count > 0 %}
+    {% form 'cart', cart, class: 'cart-page__form' %}
+      <div class="cart-page__items">
+        {% for item in cart.items %}
+          <div class="cart-page__item">
+            <div class="cart-page__item-thumbnail">
+              {% if item.image %}
+                <img
+                  src="{{ item.image | image_url: width: 200 }}"
+                  srcset="
+                    {{ item.image | image_url: width: 200 }} 1x,
+                    {{ item.image | image_url: width: 400 }} 2x
+                  "
+                  alt="{{ item.image.alt | default: item.product.title | escape }}"
+                  loading="lazy"
+                  width="{{ item.image.width }}"
+                  height="{{ item.image.height }}"
+                >
+              {% endif %}
+            </div>
+
+            <div class="cart-page__item-details">
+              <div class="cart-page__item-info">
+                <p class="cart-page__item-title">
+                  <a href="{{ item.url }}">{{ item.product.title }}</a>
+                </p>
+                {% if item.variant.title != 'Default Title' %}
+                  <p class="cart-page__item-variant">{{ item.variant.title }}</p>
+                {% endif %}
+              </div>
+
+              <div class="cart-page__stepper" data-cart-stepper data-line="{{ forloop.index }}">
+                <button
+                  type="button"
+                  class="cart-page__stepper-btn"
+                  data-cart-stepper-decrease
+                  data-change-url="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | minus: 1 }}"
+                  aria-label="{{ 'cart.decrease_quantity' | t }}"
+                >&minus;</button>
+                <span class="cart-page__stepper-qty">{{ item.quantity }}</span>
+                <button
+                  type="button"
+                  class="cart-page__stepper-btn"
+                  data-cart-stepper-increase
+                  data-change-url="{{ routes.cart_change_url }}?line={{ forloop.index }}&quantity={{ item.quantity | plus: 1 }}"
+                  aria-label="{{ 'cart.increase_quantity' | t }}"
+                ><span class="icon-plus" aria-hidden="true"></span></button>
+              </div>
+            </div>
+
+            <p class="cart-page__item-price">{{ item.final_line_price | divided_by: 100 }} €</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="cart-page__summary">
+        <div class="cart-page__summary-row">
+          <p>{{ 'cart.shipping' | t }}</p>
+          <p>{{ 'cart.shipping_note' | t }}</p>
+        </div>
+        <div class="cart-page__summary-row">
+          <p>{{ 'cart.subtotal' | t }}</p>
+          <p>{{ cart.total_price | divided_by: 100 }} €</p>
+        </div>
+
+        <button type="submit" name="checkout" class="cart-page__checkout">
+          {{ 'cart.checkout' | t }}
+        </button>
+      </div>
+    {% endform %}
+  {% else %}
+    <div class="cart-page__empty">
+      <p>{{ 'cart.empty' | t }}</p>
+      <a href="{{ routes.all_products_collection_url }}" class="cart-page__empty-link">
+        {{ 'cart.view_all_products' | t }}
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .cart-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+    padding: var(--space-16) var(--page-margin) var(--space-96);
+  }
+
+  .cart-page__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .cart-page__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .cart-page__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .cart-page__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    padding-bottom: var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cart-page__item-thumbnail {
+    flex-shrink: 0;
+    width: 100px;
+    height: 125px;
+    overflow: hidden;
+  }
+
+  .cart-page__item-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cart-page__item-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    flex: 1 0 0;
+    min-width: 0;
+  }
+
+  .cart-page__item-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-page__item-title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .cart-page__item-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-page__item-title a:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .cart-page__item-variant {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  .cart-page__stepper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .cart-page__stepper-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    line-height: 1;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .cart-page__stepper-btn[data-cart-stepper-decrease] {
+    justify-content: flex-start;
+  }
+
+  .cart-page__stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-page__stepper-btn:not(:disabled):hover {
+      opacity: 0.7;
+    }
+  }
+
+  .cart-page__stepper-qty {
+    min-width: 1em;
+    text-align: center;
+  }
+
+  .cart-page__item-price {
+    flex-shrink: 0;
+    margin: 0;
+    text-align: right;
+  }
+
+  .cart-page__summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    max-width: 24rem;
+  }
+
+  .cart-page__summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cart-page__summary-row p {
+    margin: 0;
+  }
+
+  .cart-page__checkout {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-page__checkout:hover {
+      opacity: 0.9;
+    }
+  }
+
+  .cart-page__empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    color: var(--color-foreground);
+  }
+
+  .cart-page__empty p {
+    margin: 0;
+  }
+
+  .cart-page__empty-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--space-16);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-page__empty-link:hover {
+      opacity: 0.9;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.querySelectorAll('[data-cart-stepper-decrease], [data-cart-stepper-increase]').forEach((button) => {
+    button.addEventListener('click', () => {
+      button.disabled = true;
+      fetch(button.dataset.changeUrl, { headers: { Accept: 'application/json' } }).then(() => window.location.reload());
+    });
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.cart",
+  "settings": [],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

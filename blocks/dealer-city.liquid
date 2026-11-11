@@ -1,0 +1,54 @@
+<div class="dealer-city" {{ block.shopify_attributes }}>
+  {% if block.settings.city != blank %}
+    <p class="dealer-city__heading">{{ block.settings.city }}</p>
+  {% endif %}
+
+  <div class="dealer-city__list">
+    {% content_for 'blocks' %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .dealer-city {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .dealer-city__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .dealer-city__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.dealer_city",
+  "settings": [
+    {
+      "type": "text",
+      "id": "city",
+      "label": "t:labels.city",
+      "default": "München"
+    }
+  ],
+  "blocks": [
+    { "type": "dealer-entry" }
+  ],
+  "presets": [
+    {
+      "name": "t:general.dealer_city",
+      "blocks": [
+        { "type": "dealer-entry" }
+      ]
+    }
+  ]
+}
+{% endschema %}

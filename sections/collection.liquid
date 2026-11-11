@@ -1,0 +1,866 @@
+{% comment %}
+  Collection page: a submenu across every collection in the store (plus
+  an "all products" entry), an optional description, and a responsive
+  product grid (4 columns desktop, 2 columns mobile) built from the
+  product-card snippet.
+{% endcomment %}
+
+<div class="collection-header full-width">
+  <div class="collection-nav-wrap" data-sticky-submenu>
+    <nav class="collection-nav" aria-label="{{ 'collections.title' | t }}">
+      <a
+        href="{{ routes.all_products_collection_url }}"
+        class="collection-nav__link{% if collection.handle == 'all' %} is-active{% endif %}"
+      >
+        <span>
+          {{- 'collections.all_products' | t -}}
+          {%- if settings.show_collection_counts -%}
+            <sup class="collection-nav__count">{% render 'collection-card-count', collection: collections.all %}</sup>
+          {%- endif -%}
+        </span>
+      </a>
+      {% liquid
+        assign order_menu = linklists[section.settings.menu_order]
+      %}
+      {% if order_menu %}
+        {% comment %} Same order as the chosen navigation menu. {% endcomment %}
+        {% for link in order_menu.links %}
+          {% if link.type == 'collection_link' and link.object.handle != 'all' and link.object.handle != 'frontpage' %}
+            <a
+              href="{{ link.object.url }}"
+              class="collection-nav__link{% if link.object.handle == collection.handle %} is-active{% endif %}"
+            >
+              <span>
+                {{- link.object.title -}}
+                {%- if settings.show_collection_counts -%}
+                  <sup class="collection-nav__count">{% render 'collection-card-count', collection: link.object %}</sup>
+                {%- endif -%}
+              </span>
+            </a>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        {% for menu_collection in collections %}
+          {% comment %}
+            "frontpage" is Shopify's built-in catch-all collection for
+            products not assigned to any collection — not something a
+            merchant curates, so it doesn't belong in a customer-facing
+            submenu.
+          {% endcomment %}
+          {% unless menu_collection.handle == 'all' or menu_collection.handle == 'frontpage' %}
+            <a
+              href="{{ menu_collection.url }}"
+              class="collection-nav__link{% if menu_collection.handle == collection.handle %} is-active{% endif %}"
+            >
+              <span>
+                {{- menu_collection.title -}}
+                {%- if settings.show_collection_counts -%}
+                  <sup class="collection-nav__count">{% render 'collection-card-count', collection: menu_collection %}</sup>
+                {%- endif -%}
+              </span>
+            </a>
+          {% endunless %}
+        {% endfor %}
+      {% endif %}
+    </nav>
+  </div>
+
+  {% liquid
+    # Each collection's own custom "Headline" metafield (namespace
+    # "custom", key "headline") — lets it differ from the submenu/nav,
+    # which always shows the title. No fallback to the title when it's
+    # empty: the title is already shown twice (submenu and the heading
+    # above the product grid), so the headline is simply left out.
+    assign headline = collection.metafields.custom.headline
+
+    assign description = collection.description
+
+    # Custom "Text color" metafield (namespace "custom", key
+    # "custom_text_color", value "light" or "dark") lets each
+    # collection pick its own contrast against its own image — same
+    # fallback pattern as headline/image. Normalized (trimmed +
+    # lowercased) since the value is used verbatim as a CSS class
+    # name below — anything that isn't exactly "light" or "dark"
+    # falls back to dark instead of silently producing a class that
+    # matches no CSS rule.
+    assign banner_text_color = collection.metafields.custom.custom_text_color | strip | downcase
+    unless banner_text_color == 'light' or banner_text_color == 'dark'
+      assign banner_text_color = 'dark'
+    endunless
+
+    # Each collection's own image (set on the collection itself in
+    # Shopify admin), so every collection can have a different banner
+    # without needing its own template.
+    assign banner_image = collection.image
+
+    # Each collection's own "Video" metafield (namespace "custom",
+    # key "video", type "File") replaces the image when set.
+    assign banner_video = collection.metafields.custom.video.value
+
+    assign has_banner_media = false
+    if banner_image != blank or banner_video != blank
+      assign has_banner_media = true
+    endif
+  %}
+
+  {% if has_banner_media %}
+    <div class="collection-banner collection-banner--{{ banner_text_color }}">
+      <div class="collection-banner__media">
+        {% if banner_video != blank %}
+          {{
+            banner_video
+            | video_tag:
+              image_size: '1600x',
+              autoplay: true,
+              loop: true,
+              muted: true,
+              controls: false,
+              playsinline: true,
+              width: banner_video.width,
+              height: banner_video.height
+          }}
+        {% else %}
+          <picture>
+            {% if banner_image != blank %}
+              <source
+                media="(max-width: 749px)"
+                srcset="
+                  {{ banner_image | image_url: width: 750 }} 1x,
+                  {{ banner_image | image_url: width: 1500 }} 2x
+                "
+              >
+              <img
+                src="{{ banner_image | image_url: width: 1600 }}"
+                srcset="
+                  {{ banner_image | image_url: width: 1600 }} 1x,
+                  {{ banner_image | image_url: width: 3200 }} 2x
+                "
+                alt=""
+                loading="eager"
+                width="{{ banner_image.width }}"
+                height="{{ banner_image.height }}"
+              >
+            {% endif %}
+          </picture>
+        {% endif %}
+      </div>
+
+      <div class="collection-banner__content">
+        {% if headline != blank %}
+          <h1 class="collection-headline">{{ headline }}</h1>
+        {% endif %}
+
+        {% if description != blank %}
+          {% render 'read-more', text: description, rich: true, class: 'collection-header__description' %}
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    {% if headline != blank %}
+      <h1 class="collection-headline">{{ headline }}</h1>
+    {% endif %}
+
+    {% if description != blank %}
+      {% render 'read-more', text: description, rich: true, class: 'collection-header__description' %}
+    {% endif %}
+  {% endif %}
+</div>
+
+{% comment %}
+  250 per page (Shopify's maximum) so the whole collection is on one
+  page and the filter drawer (snippets/collection-filter-drawer.liquid),
+  which filters and sorts the cards in the browser, covers all of it.
+{% endcomment %}
+{% paginate collection.products by 250 %}
+  {%- capture card_count -%}
+    {%- render 'collection-card-count', card_products: collection.products -%}
+  {%- endcapture -%}
+
+  {% if collection.products.size > 0 %}
+    <div class="collection-grid-heading full-width">
+      {% comment %}
+        The number of objects shown ("10 Produkte") rather than the
+        collection's title, which the submenu right above already
+        shows. Updated by the filter drawer as filters narrow it down,
+        from the singular/plural templates. The page's <h1> is the
+        visible headline above when one is set; otherwise the title,
+        hidden, for search engines and screen readers.
+      {% endcomment %}
+      {% if headline == blank %}
+        <h1 class="visually-hidden">
+          {%- if collection.handle == 'all' -%}
+            {{ 'collections.all_products' | t }}
+          {%- else -%}
+            {{ collection.title }}
+          {%- endif -%}
+        </h1>
+      {% endif %}
+      <p
+        class="collection-grid-heading__title"
+        data-filter-card-count
+        data-template-one="{{ 'collections.objects_count.one' | t: count: '__COUNT__' | escape }}"
+        data-template-other="{{ 'collections.objects_count.other' | t: count: '__COUNT__' | escape }}"
+      >
+        {%- # A number, not the captured string, so "1 Produkt" picks the singular -%}
+        {%- assign card_count_number = card_count | plus: 0 -%}
+        {{- 'collections.objects_count' | t: count: card_count_number -}}
+      </p>
+
+      <div class="collection-grid-columns" role="group" aria-label="{{ 'collections.grid_columns' | t }}">
+        <button
+          type="button"
+          class="collection-grid-columns__link collection-grid-columns__link--mobile is-active"
+          data-columns-group="mobile"
+          data-columns="2"
+        >2</button>
+        <button
+          type="button"
+          class="collection-grid-columns__link collection-grid-columns__link--mobile"
+          data-columns-group="mobile"
+          data-columns="1"
+        >1</button>
+        <button
+          type="button"
+          class="collection-grid-columns__link collection-grid-columns__link--desktop is-active"
+          data-columns-group="desktop"
+          data-columns="4"
+        >4</button>
+        <button
+          type="button"
+          class="collection-grid-columns__link collection-grid-columns__link--desktop"
+          data-columns-group="desktop"
+          data-columns="2"
+        >2</button>
+      </div>
+
+      {% if settings.show_collection_filter %}
+        <button type="button" class="collection-filter-toggle" data-filter-open>
+          <span class="collection-filter-toggle__icon icon-plus" aria-hidden="true"></span>
+          {{- 'collections.filter.button' | t -}}
+        </button>
+      {% endif %}
+    </div>
+
+    <div class="collection-grid full-width" data-filter-grid>
+      {% liquid
+        # Each collection picks its own ordered list of "Story"
+        # metaobjects via its "stories" metafield (namespace "custom",
+        # key "stories", type "List of metaobject references" ->
+        # Story) — different collections can show different stories,
+        # or none, or several placed at different grid positions.
+        #
+        # Bracket indexing (stories[n]) doesn't reliably resolve on
+        # this kind of list — it silently returns nil — so placement
+        # below only ever uses "for x in stories", never direct
+        # indexing, and tracks a placed-count instead of a pointer.
+        assign stories = collection.metafields.custom.stories.value
+        assign safe_interval = section.settings.promo_interval | default: 8 | at_least: 1
+        assign grid_item_index = 0
+        assign placed_story_count = 0
+      %}
+      {% for product in collection.products %}
+        {% liquid
+          assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+          unless color_option
+            assign color_option = product.options_with_values | where: 'name', 'Color' | first
+          endunless
+
+          assign color_index = -1
+          if color_option
+            for opt in product.options
+              if opt == color_option.name
+                assign color_index = forloop.index0
+              endif
+            endfor
+          endif
+
+          # Material for the filter: the product's "Material" metafield
+          # (custom.material), a list or a single text value.
+          assign material_field = product.metafields.custom.material
+          assign card_materials = ''
+          if material_field.type contains 'list'
+            assign card_materials = material_field.value | join: '|'
+          elsif material_field.value != blank
+            assign card_materials = material_field.value
+          endif
+
+          # "Label" in the filter: the product's tags (filter only, never
+          # shown on the card).
+          assign card_labels = product.tags | join: '|'
+
+          assign card_count_per_product = 1
+          if color_option and color_option.values.size > 1
+            assign card_count_per_product = color_option.values.size
+          endif
+        %}
+        {% for i in (1..card_count_per_product) %}
+          {% liquid
+            assign card_variant = nil
+            assign card_colors = ''
+            if card_count_per_product > 1
+              assign value = color_option.values[forloop.index0]
+              assign card_colors = value.name
+              for candidate in product.variants
+                if candidate.options[color_index] == value.name
+                  assign card_variant = candidate
+                  break
+                endif
+              endfor
+            elsif color_option
+              assign card_colors = color_option.values | map: 'name' | join: '|'
+            endif
+            assign card_price = product.price
+            if card_variant
+              assign card_price = card_variant.price
+            endif
+          %}
+          {% comment %}
+            display: contents wrapper — invisible to the grid layout,
+            only there to carry the filter data (and be hidden/reordered).
+          {% endcomment %}
+          <div
+            class="collection-grid__item"
+            data-filter-item
+            data-index="{{ grid_item_index }}"
+            data-colors="{{ card_colors | escape }}"
+            data-materials="{{ card_materials | escape }}"
+            data-price="{{ card_price }}"
+            data-labels="{{ card_labels | escape }}"
+          >
+            {% if card_variant %}
+              {% render 'product-card', product: product, variant: card_variant %}
+            {% else %}
+              {% render 'product-card', product: product %}
+            {% endif %}
+          </div>
+          {% liquid
+            assign grid_item_index = grid_item_index | plus: 1
+            assign promo_story = blank
+            for story in stories
+              assign target_index = forloop.index0 | times: safe_interval | plus: section.settings.promo_position
+              if grid_item_index == target_index
+                assign promo_story = story
+                assign placed_story_count = placed_story_count | plus: 1
+                break
+              endif
+            endfor
+          %}
+          {% if promo_story != blank %}
+            <div class="collection-grid__item" data-filter-story>
+              {% render 'collection-grid-story', story: promo_story, speed: section.settings.story_speed, bar_color: section.settings.story_bar_color %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      {% comment %}
+        Any stories that never found a slot (e.g. the collection has
+        fewer products than the configured position/interval need)
+        still get shown, appended at the end, rather than silently
+        dropped. Stories are always placed in order above, so the
+        first placed_story_count ones are already on the page.
+      {% endcomment %}
+      {% for story in stories %}
+        {% if forloop.index0 >= placed_story_count %}
+          <div class="collection-grid__item" data-filter-story>
+            {% render 'collection-grid-story', story: story, speed: section.settings.story_speed, bar_color: section.settings.story_bar_color %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <p class="collection-empty full-width" data-filter-empty hidden>{{ 'collections.no_matches' | t }}</p>
+
+    {% if settings.show_collection_filter %}
+      {%- comment -%}
+        Filter colour order: the colour metaobjects picked (and dragged
+        into order) in the section's "filter_color_order" setting,
+        joined by "|" for the drawer.
+      {%- endcomment -%}
+      {%- capture color_order -%}
+        {%- for color_entry in section.settings.filter_color_order -%}
+          {{- color_entry.label.value | default: color_entry.system.handle -}}|
+        {%- endfor -%}
+      {%- endcapture -%}
+      {% render 'collection-filter-drawer', collection: collection, card_count: card_count, color_order: color_order %}
+    {% endif %}
+  {% else %}
+    <p class="collection-empty full-width">{{ 'collections.no_matches' | t }}</p>
+  {% endif %}
+
+  {% if paginate.pages > 1 %}
+    <div class="collection-pagination full-width">
+      {{ paginate | default_pagination }}
+    </div>
+  {% endif %}
+{% endpaginate %}
+
+{% stylesheet %}
+  .collection-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-96);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  /* Bleeds past the header's own page-margin padding so the border
+     reaches the true viewport edge (same technique as
+     snippets/page-submenu.liquid), while its own padding re-insets
+     the nav so it still lines up on the grid. */
+  .collection-nav-wrap {
+    margin-left: calc(-1 * var(--page-margin));
+    margin-right: calc(-1 * var(--page-margin));
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+    padding-bottom: var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .collection-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-12);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  /* A square bullet marks the current page — same convention as the
+     header-menu/footer-column/page-submenu links. */
+  .collection-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .collection-nav__link.is-active {
+    gap: var(--space-6);
+  }
+
+  .collection-nav__link::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .collection-nav__link.is-active::before {
+    width: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .collection-nav__link:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .collection-headline {
+    margin: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .collection-header__description {
+    color: var(--color-foreground);
+  }
+
+  @media (max-width: 749px) {
+    /* No gap between the headline and the description below it. */
+    .collection-headline + .collection-header__description {
+      margin-top: calc(-1 * var(--space-16));
+    }
+  }
+
+  /* When an image (or video) is set, the headline/description render
+     as a full-bleed banner instead — same treatment as
+     sections/headline-banner.liquid. */
+  .collection-banner {
+    /* Bleeds past collection-header's own page-margin padding so the
+       image reaches the true viewport edge, same technique as
+       .collection-nav-wrap. */
+    margin-left: calc(-1 * var(--page-margin));
+    margin-right: calc(-1 * var(--page-margin));
+    position: relative;
+    isolation: isolate;
+    height: 90svh;
+    min-height: 36rem;
+  }
+
+  /* No gap between the submenu's line and the image, unlike the
+     plain-text headline/description. */
+  .collection-nav-wrap + .collection-banner {
+    margin-top: calc(-1 * var(--space-16));
+  }
+
+  .collection-banner__media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90svh;
+    min-height: 36rem;
+    z-index: -1;
+    display: block;
+    overflow: hidden;
+    view-timeline-name: --collection-banner-view;
+    view-timeline-axis: block;
+  }
+
+  .collection-banner__media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .collection-banner__media img,
+  .collection-banner__media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: collection-banner-parallax linear both;
+    animation-timeline: --collection-banner-view;
+    animation-range: cover 0% cover 100%;
+  }
+
+  @keyframes collection-banner-parallax {
+    from {
+      transform: scale(1.12) translateY(-4%);
+    }
+    to {
+      transform: scale(1.12) translateY(4%);
+    }
+  }
+
+  /* Sticky within the banner's own height, same as the hero/headline
+     banners — stays pinned just below the header while its own
+     section scrolls through the viewport. */
+  .collection-banner__content {
+    position: sticky;
+    top: var(--sticky-offset, var(--header-height, 3.5rem));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-16);
+    padding: var(--space-16) var(--page-margin);
+  }
+
+  .collection-banner--light {
+    color: var(--color-background);
+  }
+
+  .collection-banner--dark {
+    color: var(--color-foreground);
+  }
+
+  .collection-banner--light .collection-header__description {
+    color: var(--color-background);
+  }
+
+  @media (max-width: 749px) {
+    .collection-banner,
+    .collection-banner__media {
+      height: 80svh;
+    }
+  }
+
+  /* Repeats the collection's title above the grid — same visual
+     treatment as sections/product-grid.liquid's heading. */
+  /* Same column grid as .collection-grid below it (2 mobile, 4
+     desktop), so the toggle lines up with the second product
+     column instead of just trailing the heading text. */
+  .collection-grid-heading {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    align-items: baseline;
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+    padding-bottom: var(--space-16);
+  }
+
+  .collection-grid-heading__title {
+    margin: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .collection-nav__count {
+    margin-left: var(--space-2);
+    font-size: 0.7em;
+    line-height: 0;
+    letter-spacing: 0.05em;
+    /* Raise it just enough that its cap height lines up with the
+       title's: the title's cap height (1cap / 0.7 at this size) minus
+       its own. 0.3em is the fallback where the cap unit is missing. */
+    vertical-align: 0.3em;
+    vertical-align: calc(1cap / 0.7 - 1cap);
+  }
+
+  /* Opens the filter drawer (snippets/collection-filter-drawer.liquid).
+     Shares the last grid cell with the column toggle, pushed to the
+     right edge. */
+  .collection-filter-toggle {
+    grid-column: -2;
+    grid-row: 1;
+    justify-self: end;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .collection-filter-toggle:hover {
+      opacity: 0.7;
+    }
+  }
+
+  /* Lets a visitor switch the grid density themselves — same visual
+     convention as the submenu links (a square bullet marks the
+     active option), just a bare number instead of a label. */
+  .collection-grid-columns {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    display: flex;
+    gap: var(--space-12);
+    flex-shrink: 0;
+  }
+
+  /* Baseline-aligned so the number (not the empty bullet, which
+     would otherwise lend the button its baseline) sits on the same
+     line as the heading and the filter button. */
+  .collection-grid-columns__link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    text-decoration: none;
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  .collection-grid-columns__link.is-active {
+    gap: var(--space-6);
+  }
+
+  .collection-grid-columns__link::before {
+    content: '';
+    align-self: center;
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .collection-grid-columns__link.is-active::before {
+    width: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .collection-grid-columns__link:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .collection-grid-columns__link--desktop {
+    display: none;
+  }
+
+  .collection-grid {
+    --columns: 2;
+    display: grid;
+    grid-template-columns: repeat(var(--columns), 1fr);
+    gap: var(--space-32) var(--space-2);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  /* Filter wrapper around each card/story: no box of its own, so the
+     cards stay direct grid items. */
+  .collection-grid__item {
+    display: contents;
+  }
+
+  .collection-grid__item[hidden] {
+    display: none;
+  }
+
+  .collection-empty {
+    color: var(--color-muted);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  .collection-pagination {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-32) var(--page-margin);
+  }
+
+  @media (min-width: 750px) {
+    .collection-header {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-16) var(--space-4);
+      align-items: start;
+    }
+
+    .collection-nav-wrap {
+      grid-column: 1 / -1;
+    }
+
+    .collection-headline {
+      grid-column: 1 / 3;
+    }
+
+    .collection-header__description {
+      grid-column: 3 / 5;
+    }
+
+    .collection-banner {
+      grid-column: 1 / -1;
+    }
+
+    .collection-banner__content {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    /* 4px between the cards, the same thin gap as between the stacked
+       images on the product page. */
+    .collection-grid {
+      --columns: 4;
+      column-gap: var(--space-4);
+    }
+
+    .collection-grid-heading {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      align-items: baseline;
+      justify-content: normal;
+    }
+
+    .collection-grid-heading__title {
+      grid-column: 1;
+    }
+
+    .collection-grid-columns {
+      grid-column: 3;
+    }
+
+    .collection-grid-columns__link--mobile {
+      display: none;
+    }
+
+    .collection-grid-columns__link--desktop {
+      display: inline-flex;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.querySelectorAll('.collection-grid-columns__link').forEach((button) => {
+    button.addEventListener('click', () => {
+      const grid = button.closest('.collection-grid-heading').nextElementSibling;
+      if (!grid || !grid.classList.contains('collection-grid')) return;
+
+      document
+        .querySelectorAll(`.collection-grid-columns__link[data-columns-group="${button.dataset.columnsGroup}"]`)
+        .forEach((sibling) => sibling.classList.remove('is-active'));
+      button.classList.add('is-active');
+
+      grid.style.setProperty('--columns', button.dataset.columns);
+    });
+  });
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.collection",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu_order",
+      "label": "t:labels.menu_order",
+      "info": "t:labels.menu_order_info"
+    },
+    {
+      "type": "header",
+      "content": "t:labels.promo_tile_header"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:labels.story_slides_info"
+    },
+    {
+      "type": "number",
+      "id": "promo_position",
+      "label": "t:labels.promo_position",
+      "info": "t:labels.promo_position_info",
+      "default": 4
+    },
+    {
+      "type": "number",
+      "id": "promo_interval",
+      "label": "t:labels.promo_interval",
+      "info": "t:labels.promo_interval_info",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "story_speed",
+      "label": "t:labels.story_speed",
+      "info": "t:labels.story_speed_info",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "story_bar_color",
+      "label": "t:labels.story_bar_color",
+      "info": "t:labels.story_bar_color_info",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "metaobject_list",
+      "id": "filter_color_order",
+      "label": "t:labels.filter_color_order",
+      "info": "t:labels.filter_color_order_info",
+      "metaobject_type": "shopify--color-pattern",
+      "limit": 50
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

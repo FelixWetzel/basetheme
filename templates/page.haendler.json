@@ -1,0 +1,67 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "dealers_jhQgUH": {
+      "type": "dealers",
+      "blocks": {
+        "dealer_city_4TF6R9": {
+          "type": "dealer-city",
+          "name": "t:general.dealer_city",
+          "settings": {
+            "city": ""
+          },
+          "blocks": {
+            "dealer_entry_W4j8pd": {
+              "type": "dealer-entry",
+              "name": "t:general.dealer_entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            },
+            "dealer_entry_hF7jxT": {
+              "type": "dealer-entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            },
+            "dealer_entry_EGkt36": {
+              "type": "dealer-entry",
+              "name": "t:general.dealer_entry",
+              "settings": {
+                "details": "Firmenname\nStraße Hausnummer\nPLZ Ort"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "dealer_entry_W4j8pd",
+            "dealer_entry_hF7jxT",
+            "dealer_entry_EGkt36"
+          ]
+        }
+      },
+      "block_order": [
+        "dealer_city_4TF6R9"
+      ],
+      "name": "t:general.dealers",
+      "settings": {
+        "submenu": "footer",
+        "headline": "Überschrift",
+        "text": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>"
+      }
+    }
+  },
+  "order": [
+    "dealers_jhQgUH"
+  ]
+}

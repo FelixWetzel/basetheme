@@ -1,0 +1,153 @@
+{% comment %}
+  Withdrawal form for the EU withdrawal function (§ 356a BGB): the page
+  it sits on is linked from the footer as "Vertrag widerrufen", and the
+  submit button is the confirmation step ("Widerruf bestätigen").
+
+  Sent through Shopify's contact form, so each withdrawal lands in the
+  store's contact inbox. Shopify does not email the customer, so the
+  legally required receipt confirmation (content, date and time of the
+  withdrawal) is sent by hand from that inbox — without delay.
+
+  The contact[...] keys are German on purpose: they are the row labels
+  in the email the store receives.
+{% endcomment %}
+
+{% assign form_id = 'withdrawal-form-' | append: block.id %}
+
+<div class="withdrawal-form" {{ block.shopify_attributes }}>
+  {% form 'contact', id: form_id, class: 'withdrawal-form__form' %}
+    {% if form.posted_successfully? %}
+      <div class="withdrawal-form__success rte" role="status">
+        {{ block.settings.success_text }}
+      </div>
+    {% else %}
+      <input type="hidden" name="contact[Anliegen]" value="Widerruf">
+
+      {% if form.errors %}
+        <div class="withdrawal-form__error" role="alert">{{ form.errors | default_errors }}</div>
+      {% endif %}
+
+      <div class="withdrawal-form__field">
+        <label for="{{ form_id }}-name">{{ 'general.withdrawal.name' | t }}</label>
+        <input type="text" id="{{ form_id }}-name" name="contact[Name]" autocomplete="name" required>
+      </div>
+
+      <div class="withdrawal-form__field">
+        <label for="{{ form_id }}-order">{{ 'general.withdrawal.order_number' | t }}</label>
+        <input type="text" id="{{ form_id }}-order" name="contact[Bestellnummer]" required>
+      </div>
+
+      <div class="withdrawal-form__field">
+        <label for="{{ form_id }}-email">{{ 'general.withdrawal.email' | t }}</label>
+        <input
+          type="email"
+          id="{{ form_id }}-email"
+          name="contact[email]"
+          autocomplete="email"
+          autocorrect="off"
+          autocapitalize="off"
+          required
+        >
+      </div>
+
+      <div class="withdrawal-form__field">
+        <label for="{{ form_id }}-message">{{ 'general.withdrawal.message' | t }}</label>
+        <textarea id="{{ form_id }}-message" name="contact[Nachricht]" rows="5"></textarea>
+        <p class="withdrawal-form__hint">{{ 'general.withdrawal.message_hint' | t }}</p>
+      </div>
+
+      <button type="submit" class="withdrawal-form__submit">
+        {{ block.settings.button_label }}
+      </button>
+    {% endif %}
+  {% endform %}
+</div>
+
+{% stylesheet %}
+  .withdrawal-form__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .withdrawal-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .withdrawal-form__field label {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  /* Same outlined field as the newsletter popup
+     (snippets/newsletter-popup.liquid). */
+  .withdrawal-form__field input,
+  .withdrawal-form__field textarea {
+    width: 100%;
+    padding: var(--space-16);
+    border: 1px solid var(--color-foreground);
+    background: none;
+    color: var(--color-foreground);
+    outline: none;
+  }
+
+  .withdrawal-form__field textarea {
+    resize: vertical;
+  }
+
+  .withdrawal-form__hint,
+  .withdrawal-form__error {
+    margin: 0;
+  }
+
+  .withdrawal-form__error ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Same filled button as the newsletter popup's submit. */
+  .withdrawal-form__submit {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: var(--space-16);
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    font: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .withdrawal-form__submit:hover {
+      opacity: 0.9;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.withdrawal_form",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Widerruf bestätigen"
+    },
+    {
+      "type": "richtext",
+      "id": "success_text",
+      "label": "t:labels.success_text",
+      "default": "<p>Dein Widerruf ist bei uns eingegangen. Wir bestätigen dir den Eingang umgehend per E-Mail.</p>"
+    }
+  ],
+  "presets": [{ "name": "t:general.withdrawal_form" }]
+}
+{% endschema %}

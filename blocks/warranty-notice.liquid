@@ -1,0 +1,39 @@
+{% comment %}
+  The EU "harmonised notice" on the legal guarantee (Directive (EU)
+  2024/825, Implementing Regulation (EU) 2025/1960), mandatory for
+  online shops since 27 September 2026, for the "Gesetzliche
+  Gewährleistung" page. The graphic itself (a fixed theme asset, not an
+  editor image, so it can't be swapped or altered) lives in
+  snippets/warranty-notice.liquid.
+{% endcomment %}
+
+<div class="warranty-notice" {{ block.shopify_attributes }}>
+  {% render 'warranty-notice' %}
+
+  <a class="warranty-notice__link" href="https://europa.eu/youreurope/garantien" target="_blank" rel="noopener">
+    europa.eu/youreurope/garantien
+  </a>
+</div>
+
+{% stylesheet %}
+  .warranty-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-16);
+  }
+
+  .warranty-notice__link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.warranty_notice",
+  "presets": [{ "name": "t:general.warranty_notice" }]
+}
+{% endschema %}

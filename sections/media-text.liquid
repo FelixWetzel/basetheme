@@ -1,0 +1,361 @@
+{% comment %}
+  A media caption module for editorial pages (About, Partner und
+  Manufakturen): a full-bleed image or video (or two side by side on
+  desktop, stacked on mobile — or hidden there, if so chosen — when a
+  second media is set), followed by
+  a heading and an expandable text with a "+ Mehr lesen" toggle
+  (snippets/read-more.liquid). Media
+  handling (desktop/mobile image, optional video override) matches
+  sections/hero-banner.liquid — just without text overlaid on the
+  media itself.
+{% endcomment %}
+
+{% liquid
+  assign has_primary_media = false
+  if section.settings.image != blank or section.settings.image_mobile != blank or section.settings.video != blank
+    assign has_primary_media = true
+  endif
+
+  assign has_secondary_media = false
+  if section.settings.image_secondary != blank or section.settings.video_secondary != blank
+    assign has_secondary_media = true
+  endif
+
+  assign has_media = false
+  if has_primary_media or has_secondary_media
+    assign has_media = true
+  endif
+%}
+
+<div class="media-text{% unless has_media %} media-text--no-media{% endunless %}{% if section.settings.heading == blank and section.settings.text_rich == blank %} media-text--no-content{% endif %} full-width">
+  {% if has_media %}
+    <div class="media-text__media{% if has_secondary_media %} media-text__media--split{% endif %}"{% if section.settings.image_darken > 0 %} style="--image-darken: {{ section.settings.image_darken | divided_by: 100.0 }};"{% endif %}>
+      <div class="media-text__media-item">
+        {% if section.settings.video != blank %}
+          {{
+            section.settings.video
+            | video_tag:
+              image_size: '1600x',
+              autoplay: true,
+              loop: true,
+              muted: true,
+              controls: false,
+              playsinline: true,
+              width: section.settings.video.width,
+              height: section.settings.video.height
+          }}
+        {% else %}
+          <picture>
+            {% if section.settings.image_mobile != blank %}
+              <source
+                media="(max-width: 749px)"
+                srcset="
+                  {{ section.settings.image_mobile | image_url: width: 750 }} 1x,
+                  {{ section.settings.image_mobile | image_url: width: 1500 }} 2x
+                "
+              >
+            {% endif %}
+            {% if section.settings.image != blank %}
+              <img
+                src="{{ section.settings.image | image_url: width: 1600 }}"
+                srcset="
+                  {{ section.settings.image | image_url: width: 1600 }} 1x,
+                  {{ section.settings.image | image_url: width: 3200 }} 2x
+                "
+                alt=""
+                loading="lazy"
+                width="{{ section.settings.image.width }}"
+                height="{{ section.settings.image.height }}"
+              >
+            {% endif %}
+          </picture>
+        {% endif %}
+      </div>
+
+      {% if has_secondary_media %}
+        <div class="media-text__media-item{% if section.settings.hide_secondary_mobile %} media-text__media-item--desktop-only{% endif %}">
+          {% if section.settings.video_secondary != blank %}
+            {{
+              section.settings.video_secondary
+              | video_tag:
+                image_size: '1600x',
+                autoplay: true,
+                loop: true,
+                muted: true,
+                controls: false,
+                playsinline: true,
+                width: section.settings.video_secondary.width,
+                height: section.settings.video_secondary.height
+            }}
+          {% elsif section.settings.image_secondary != blank %}
+            <img
+              src="{{ section.settings.image_secondary | image_url: width: 1600 }}"
+              srcset="
+                {{ section.settings.image_secondary | image_url: width: 1600 }} 1x,
+                {{ section.settings.image_secondary | image_url: width: 3200 }} 2x
+              "
+              alt=""
+              loading="lazy"
+              width="{{ section.settings.image_secondary.width }}"
+              height="{{ section.settings.image_secondary.height }}"
+            >
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if section.settings.heading != blank or section.settings.text_rich != blank %}
+    <div class="media-text__content{% if section.settings.heading == blank %} media-text__content--text-{{ section.settings.text_position }}{% endif %}">
+      {% if section.settings.heading != blank %}
+        <p class="media-text__heading">{{ section.settings.heading }}</p>
+      {% endif %}
+
+      {% if section.settings.text_rich != blank %}
+        {% render 'read-more', text: section.settings.text_rich, rich: true, class: 'media-text__text-wrap' %}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .media-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    padding-bottom: var(--space-96);
+  }
+
+  /* Just the image(s), no heading or text: no bottom spacing, so the
+     next section follows directly. */
+  .media-text--no-content {
+    padding-bottom: 0;
+  }
+
+  /* Without the media block, the content would otherwise sit flush
+     against whatever comes before this section — keep its usual top
+     spacing instead of collapsing to zero. */
+  .media-text--no-media {
+    padding-top: var(--space-16);
+  }
+
+  .media-text__media {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .media-text__media-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 90svh;
+    min-height: 36rem;
+    overflow: hidden;
+    /* Same parallax mechanism as sections/hero-banner.liquid and
+       blocks/hero-banner-two-up-item.liquid — a distinct timeline name
+       so it doesn't couple to those, even though reusing theirs would
+       also be safe (each image resolves its own nearest ancestor). */
+    view-timeline-name: --media-text-view;
+    view-timeline-axis: block;
+  }
+
+  /* Optional black veil over the image/video, same as the hero
+     banner's. */
+  .media-text__media-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / var(--image-darken, 0));
+    pointer-events: none;
+  }
+
+  .media-text__media-item picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .media-text__media-item img,
+  .media-text__media-item video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: media-text-parallax linear both;
+    animation-timeline: --media-text-view;
+    animation-range: cover 0% cover 100%;
+  }
+
+  @keyframes media-text-parallax {
+    from {
+      transform: scale(1.12) translateY(-4%);
+    }
+    to {
+      transform: scale(1.12) translateY(4%);
+    }
+  }
+
+  @media (max-width: 749px) {
+    /* 4:5, same as the hero banners' and the headline banner's
+       stacked images on mobile. */
+    .media-text__media-item {
+      height: auto;
+      min-height: 0;
+      aspect-ratio: 4 / 5;
+    }
+
+    .media-text__media-item--desktop-only {
+      display: none;
+    }
+  }
+
+  .media-text__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  @media (max-width: 749px) {
+    /* No gap between the heading and the text below it on mobile. */
+    .media-text__content {
+      gap: 0;
+    }
+  }
+
+  .media-text__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  @media (min-width: 750px) {
+    .media-text__media--split {
+      flex-direction: row;
+    }
+
+    .media-text__media--split .media-text__media-item {
+      flex: 1 0 0;
+    }
+
+    .media-text__content {
+      flex-direction: row;
+      gap: var(--space-2);
+    }
+
+    .media-text__heading {
+      flex: 1 0 0;
+    }
+
+    .media-text__text-wrap {
+      flex: 1 0 0;
+    }
+
+    /* Below media, the text starts on the same edge as the text in
+       the right half of a two-up hero banner (the middle of the page
+       plus the page margin): half the content box, minus the page
+       margin, ends at the right margin. Without media it stays on the
+       plain grid. */
+    .media-text:not(.media-text--no-media) .media-text__text-wrap {
+      flex: 0 0 calc(50% - var(--page-margin));
+    }
+
+    /* Without a heading, the text takes the left or the right half
+       (setting) instead of the whole width — on the grid's halves, or
+       with media, the half described above (mirrored on the left). */
+    :is(.media-text__content--text-left, .media-text__content--text-right) .media-text__text-wrap {
+      flex: 0 0 calc(50% - var(--space-2) / 2);
+    }
+
+    .media-text:not(.media-text--no-media) :is(.media-text__content--text-left, .media-text__content--text-right) .media-text__text-wrap {
+      flex-basis: calc(50% - var(--page-margin));
+    }
+
+    .media-text__content--text-right .media-text__text-wrap {
+      margin-left: auto;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.media_text",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:labels.image_mobile"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_secondary",
+      "label": "t:labels.image_secondary",
+      "info": "t:labels.image_secondary_info"
+    },
+    {
+      "type": "video",
+      "id": "video_secondary",
+      "label": "t:labels.video_secondary",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "range",
+      "id": "image_darken",
+      "label": "t:labels.image_darken",
+      "info": "t:labels.image_darken_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_secondary_mobile",
+      "label": "t:labels.hide_secondary_mobile",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Headline"
+    },
+    {
+      "type": "richtext",
+      "id": "text_rich",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "select",
+      "id": "text_position",
+      "label": "t:labels.text_position",
+      "info": "t:labels.text_position_info",
+      "options": [
+        { "value": "left", "label": "t:options.alignment.left" },
+        { "value": "right", "label": "t:options.alignment.right" }
+      ],
+      "default": "right"
+    }
+  ],
+  "presets": [{ "name": "t:general.media_text" }],
+  "enabled_on": {
+    "templates": ["page"]
+  }
+}
+{% endschema %}

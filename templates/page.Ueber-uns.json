@@ -1,0 +1,99 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "page_submenu_MFyqgp": {
+      "type": "page-submenu",
+      "name": "t:general.page_submenu",
+      "settings": {
+        "submenu": "footer"
+      }
+    },
+    "text_FXXF4H": {
+      "type": "text",
+      "name": "t:general.text",
+      "settings": {
+        "large_text": false,
+        "heading": "Überschrift",
+        "text_rich": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>",
+        "text_position": "left",
+        "spacing_top": "small",
+        "spacing_bottom": "large"
+      }
+    },
+    "media_text_aezBdQ": {
+      "type": "media-text",
+      "name": "t:general.media_text",
+      "settings": {
+        "image_darken": 0,
+        "hide_secondary_mobile": false,
+        "heading": "",
+        "text_rich": "",
+        "text_position": "right"
+      }
+    },
+    "media_text_wTXEWJ": {
+      "type": "media-text",
+      "disabled": true,
+      "name": "t:general.media_text",
+      "settings": {
+        "image_darken": 0,
+        "hide_secondary_mobile": false,
+        "heading": "",
+        "text_rich": "",
+        "text_position": "right"
+      }
+    },
+    "text_w3GDGE": {
+      "type": "text",
+      "name": "t:general.text",
+      "settings": {
+        "large_text": false,
+        "heading": "Überschrift",
+        "text_rich": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>",
+        "text_position": "right",
+        "spacing_top": "small",
+        "spacing_bottom": "large"
+      }
+    },
+    "media_text_y3dyU9": {
+      "type": "media-text",
+      "name": "t:general.media_text",
+      "settings": {
+        "image_darken": 0,
+        "hide_secondary_mobile": false,
+        "heading": "",
+        "text_rich": "",
+        "text_position": "right"
+      }
+    },
+    "text_79jjxB": {
+      "type": "text",
+      "name": "t:general.text",
+      "settings": {
+        "large_text": false,
+        "heading": "Überschrift",
+        "text_rich": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>",
+        "text_position": "right",
+        "spacing_top": "small",
+        "spacing_bottom": "small"
+      }
+    }
+  },
+  "order": [
+    "page_submenu_MFyqgp",
+    "text_FXXF4H",
+    "media_text_aezBdQ",
+    "media_text_wTXEWJ",
+    "text_w3GDGE",
+    "media_text_y3dyU9",
+    "text_79jjxB"
+  ]
+}

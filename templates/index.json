@@ -1,0 +1,207 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero-banner-1": {
+      "type": "hero-banner",
+      "settings": {
+        "background_type": "color",
+        "background_color": "#e5e5e5",
+        "image_darken": 0,
+        "headline": "Überschrift",
+        "subtitle": "",
+        "cta_text": "Kaufen",
+        "link": "shopify://collections/all",
+        "text_color": "dark",
+        "show_logo": false
+      }
+    },
+    "hero-banner-two-up-1": {
+      "type": "hero-banner-two-up",
+      "blocks": {
+        "item-1": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Entdecken",
+            "link": "shopify://collections/all",
+            "text_color": "dark"
+          },
+          "blocks": {}
+        },
+        "item-2": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Entdecken",
+            "link": "shopify://collections/all",
+            "text_color": "dark"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "item-1",
+        "item-2"
+      ],
+      "settings": {
+        "mobile_single_image": false,
+        "show_logo": false,
+        "logo_position": "center",
+        "logo_color": "light"
+      }
+    },
+    "text_KxiFib": {
+      "type": "text",
+      "disabled": true,
+      "name": "t:general.text",
+      "settings": {
+        "large_text": false,
+        "heading": "Überschrift",
+        "text_rich": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>",
+        "text_position": "right",
+        "spacing_top": "small",
+        "spacing_bottom": "large"
+      }
+    },
+    "product_grid_eWQcXh": {
+      "type": "product-grid",
+      "name": "t:general.product_grid",
+      "settings": {
+        "heading": "Überschrift",
+        "cta_text": "Alle Produkte",
+        "link": "shopify://collections/all",
+        "products": [],
+        "spacing_top": "small",
+        "spacing_bottom": "large"
+      }
+    },
+    "hero_banner_WRXzXB": {
+      "type": "hero-banner",
+      "disabled": true,
+      "name": "t:general.hero_banner",
+      "settings": {
+        "background_type": "color",
+        "background_color": "#e5e5e5",
+        "image_darken": 0,
+        "headline": "Überschrift",
+        "subtitle": "",
+        "cta_text": "Kaufen",
+        "link": "shopify://collections/all",
+        "text_color": "light",
+        "show_logo": false
+      }
+    },
+    "hero_banner_two_up_PeBBcW": {
+      "type": "hero-banner-two-up",
+      "blocks": {
+        "hero_banner_two_up_item_jwwGGt": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Kaufen",
+            "link": "shopify://collections/all",
+            "text_color": "dark"
+          },
+          "blocks": {}
+        },
+        "hero_banner_two_up_item_pAwjJL": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Kaufen",
+            "link": "shopify://collections/all",
+            "text_color": "dark"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "hero_banner_two_up_item_jwwGGt",
+        "hero_banner_two_up_item_pAwjJL"
+      ],
+      "settings": {
+        "mobile_single_image": false,
+        "show_logo": false,
+        "logo_position": "center",
+        "logo_color": "light"
+      }
+    },
+    "hero_banner_two_up_VGJyVp": {
+      "type": "hero-banner-two-up",
+      "blocks": {
+        "hero_banner_two_up_item_UVVX7A": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Mehr erfahren",
+            "link": "",
+            "text_color": "light"
+          },
+          "blocks": {}
+        },
+        "hero_banner_two_up_item_DpREhV": {
+          "type": "hero-banner-two-up-item",
+          "settings": {
+            "background_type": "color",
+            "background_color": "#e5e5e5",
+            "image_darken": 0,
+            "headline": "Überschrift",
+            "subtitle": "",
+            "cta_text": "Mehr erfahren",
+            "link": "",
+            "text_color": "light"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "hero_banner_two_up_item_UVVX7A",
+        "hero_banner_two_up_item_DpREhV"
+      ],
+      "name": "t:general.hero_banner_two_up",
+      "settings": {
+        "mobile_single_image": false,
+        "show_logo": true,
+        "logo_position": "left",
+        "logo_color": "light"
+      }
+    }
+  },
+  "order": [
+    "hero-banner-1",
+    "hero-banner-two-up-1",
+    "text_KxiFib",
+    "product_grid_eWQcXh",
+    "hero_banner_WRXzXB",
+    "hero_banner_two_up_PeBBcW",
+    "hero_banner_two_up_VGJyVp"
+  ]
+}

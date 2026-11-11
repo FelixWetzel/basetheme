@@ -1,0 +1,195 @@
+<footer class="full-width">
+  <div class="footer__row">
+    <p class="footer__copyright">
+      <a href="https://buerobuero.eu" class="footer__credit" target="_blank" rel="noopener">
+        <span class="footer__credit-track">
+          {%- assign copyright_year = 'now' | date: '%Y' -%}
+          <span class="footer__credit-row">{{ 'general.footer.copyright' | t: shop: shop.name, year: copyright_year }}</span>
+          <span class="footer__credit-row">{{ 'general.footer.credit' | t }}</span>
+        </span>
+      </a>
+    </p>
+
+    {% content_for 'blocks' %}
+  </div>
+
+  {% if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 %}
+    <div class="footer__payment">
+      {% for type in shop.enabled_payment_types %}
+        {{ type | payment_type_svg_tag }}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <a href="{{ routes.root_url }}" class="footer__logo" aria-label="{{ shop.name }}">
+    {% render 'logo', type: 'large' %}
+  </a>
+</footer>
+
+{% stylesheet %}
+  footer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-96);
+    padding-top: var(--space-96);
+    padding-bottom: var(--space-16);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+    letter-spacing: 0.015em;
+  }
+
+  footer .footer__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-4);
+    width: 100%;
+  }
+
+  footer .footer__copyright {
+    flex: 1 0 0;
+    min-width: 0;
+    margin: 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  /* Shopify wraps each rendered block in its own `.shopify-block` div,
+     so that wrapper (not the block's own root element) is the actual
+     flex item here and needs to carry the equal-column sizing. */
+  footer .footer__row > .shopify-block {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+
+  /* Hovering the copyright rolls it up to the designer credit
+     ("Made with love by BüroBüro.eu", linked) — same slot-machine
+     reel as the header logo and the announcement bar. */
+  footer .footer__credit {
+    display: block;
+    height: var(--line-height-body);
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  footer .footer__credit-track {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.5s ease;
+  }
+
+  footer .footer__credit-row {
+    height: var(--line-height-body);
+    flex-shrink: 0;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    footer .footer__credit:hover .footer__credit-track {
+      transform: translateY(-50%);
+    }
+  }
+
+  footer .footer__credit:focus-visible .footer__credit-track {
+    transform: translateY(-50%);
+  }
+
+  /* Touch devices can't hover to reveal the credit anyway, and the
+     fixed-height single-line reel would clip the copyright in the
+     narrow mobile column — so drop the reel there and let the
+     copyright wrap. */
+  @media (max-width: 749px), (hover: none) {
+    footer .footer__credit {
+      height: auto;
+    }
+
+    footer .footer__credit-row {
+      height: auto;
+      white-space: normal;
+    }
+
+    footer .footer__credit-row + .footer__credit-row {
+      display: none;
+    }
+
+    footer .footer__credit:focus-visible .footer__credit-track {
+      transform: none;
+    }
+  }
+
+  footer .footer__payment {
+    display: flex;
+    gap: var(--space-16);
+  }
+
+  footer .footer__logo {
+    /* The logo fills with currentColor, not the default link blue */
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+  }
+
+  footer .footer__logo .theme-logo:not(.theme-logo--text) {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Mobile: copyright + the first footer column stack in the left
+     column, the other two footer columns stack in the right one. A
+     grid with 2 explicit rows would force both columns' row heights
+     to match each other (a short item sharing a row with a much
+     taller one leaves a huge gap under it) — CSS multi-column with
+     column-fill: auto instead fills the first column sequentially,
+     independent of the second column's height, then overflows into
+     the second. */
+  @media (max-width: 749px) {
+    footer .footer__row {
+      display: block;
+      column-count: 2;
+      column-fill: auto;
+      column-gap: var(--space-16);
+    }
+
+    footer .footer__copyright,
+    footer .footer__row > .shopify-block {
+      break-inside: avoid;
+      margin-bottom: var(--space-32);
+    }
+
+    footer .footer__row > :last-child {
+      margin-bottom: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.footer",
+  "blocks": [{ "type": "footer-column" }],
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons",
+      "label": "t:labels.show_payment_icons",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.footer",
+      "blocks": [
+        { "type": "footer-column" },
+        { "type": "footer-column" },
+        { "type": "footer-column" }
+      ]
+    }
+  ],
+  "enabled_on": {
+    "groups": ["footer"]
+  }
+}
+{% endschema %}

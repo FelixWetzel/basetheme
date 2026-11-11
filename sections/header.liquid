@@ -1,0 +1,735 @@
+<header class="full-width site-header{% if request.page_type == 'index' %} site-header--home{% endif %}">
+  {% liquid
+    # Without a signet there's nothing to roll to, so the logo stays put
+    if settings.logo_signet == blank
+      assign logo_single = true
+    endif
+  %}
+  <a
+    href="{{ routes.root_url }}"
+    class="header__logo{% if logo_single %} header__logo--single{% endif %}"
+    aria-label="{{ shop.name }}"
+    style="--header-logo-height: {{ settings.logo_height | default: 16 }}px;"
+  >
+    <span class="header__logo-track">
+      <span class="header__logo-full">{% render 'logo', type: 'main' %}</span>
+      {%- unless logo_single -%}
+        <span class="header__logo-signet">{% render 'logo', type: 'signet' %}</span>
+      {%- endunless -%}
+    </span>
+  </a>
+
+  <nav class="header__nav">
+    <button type="button" class="header__menu-toggle" data-drawer-open="header-menu">
+      {{ 'general.header.menu' | t }}
+    </button>
+
+    <button
+      type="button"
+      class="header__cart"
+      data-drawer-open="cart-drawer"
+      aria-label="{{ 'general.header.cart_label' | t: count: cart.item_count }}"
+    >
+      ( {{ cart.item_count }} )
+    </button>
+  </nav>
+</header>
+<div class="site-header-spacer"></div>
+
+<dialog id="header-menu" class="header-menu" aria-label="{{ 'general.header.menu' | t }}" scroll-lock closedby="any">
+  <div class="header-menu__bar">
+    <p class="header-menu__title">{{ 'general.header.menu' | t }}</p>
+    <button type="button" class="header-menu__close" data-drawer-close>
+      {{ 'general.header.close' | t }}
+    </button>
+  </div>
+
+  <div class="header-menu__columns">
+    <ul class="header-menu__primary" role="list">
+      {% for link in section.settings.menu_primary.links %}
+        <li data-drawer-fade>
+          <a
+            href="{{ link.url }}"
+            class="header-menu__link{% if link.url == request.path %} is-active{% endif %}"
+          >
+            <span>
+              {{- link.title -}}
+              {%- if settings.show_collection_counts and link.type == 'collection_link' -%}
+                <sup class="header-menu__count">{% render 'collection-card-count', collection: link.object %}</sup>
+              {%- elsif settings.show_collection_counts and link.type == 'catalog_link' -%}
+                <sup class="header-menu__count">{% render 'collection-card-count', collection: collections.all %}</sup>
+              {%- endif -%}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <ul class="header-menu__secondary" role="list">
+      {% for link in section.settings.menu_secondary.links %}
+        <li data-drawer-fade>
+          <a
+            href="{{ link.url }}"
+            class="header-menu__link{% if link.url == request.path %} is-active{% endif %}"
+          >
+            <span>
+              {{- link.title -}}
+              {%- if settings.show_collection_counts and link.type == 'collection_link' -%}
+                <sup class="header-menu__count">{% render 'collection-card-count', collection: link.object %}</sup>
+              {%- elsif settings.show_collection_counts and link.type == 'catalog_link' -%}
+                <sup class="header-menu__count">{% render 'collection-card-count', collection: collections.all %}</sup>
+              {%- endif -%}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if shop.customer_accounts_enabled %}
+    <a href="{{ routes.account_url }}" class="header-menu__account" data-drawer-fade>
+      {{ 'general.header.account' | t }}
+    </a>
+  {% endif %}
+</dialog>
+
+{% render 'cart-drawer' %}
+
+{% stylesheet %}
+  header {
+    /* Normal document flow by default, sitting right below the
+       announcement bar — this is the Figma "Menu bar: sticky top-0"
+       behavior. Since real CSS sticky can't work here (Shopify wraps
+       each section in a wrapper exactly as tall as its content, so
+       there's no room to stick within), JS toggles it to fixed once
+       you've scrolled past the announcement bar. */
+    position: static;
+    /* Higher than any in-page content (e.g. the product page's sticky
+       add-to-cart button, also z-index: 10) so the fixed header always
+       stays on top instead of the tie going to whichever one is later
+       in the DOM. */
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+    /* Fixed to match the announcement bar's total height exactly
+       (its 16px padding + 16px content), rather than deriving it
+       from vertical padding — the logo is taller than the
+       announcement bar's text, so padding-based sizing would make
+       this bar taller than that one. */
+    height: 3rem;
+    padding: 0 var(--page-margin);
+    background-color: var(--color-header-background);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  header.site-header--home {
+    border-bottom-color: transparent;
+  }
+
+  header.site-header--pinned {
+    position: fixed;
+    inset: 0 0 auto 0;
+  }
+
+  /* Pages with a submenu (collection, FAQ, Händler, ...): the bar
+     stays fixed; scrolling down, the submenu just scrolls away with
+     the page. Scrolling back up, the JS below fixes it below the bar
+     (leaving a same-height spacer in its place) and it slides in from
+     behind the bar; scrolling down again slides it back out. Once its
+     own place in the page is back in view it rejoins the page flow. */
+  [data-sticky-submenu].is-stuck {
+    position: fixed;
+    top: var(--header-height, 3rem);
+    left: 0;
+    right: 0;
+    z-index: 14;
+    margin: 0;
+    padding-top: var(--space-16);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+    background-color: var(--color-header-background);
+    transition: translate 0.35s ease;
+  }
+
+  [data-sticky-submenu].is-stuck.is-hidden {
+    translate: 0 calc(-100% - var(--header-height, 3rem));
+  }
+
+  /* Sticky banner texts sit below the bar + the slid-in submenu */
+  html.submenu-shown {
+    --sticky-offset: calc(var(--header-height, 3rem) + var(--submenu-height, 0px));
+  }
+
+  /* Reserves the header's height once it's pinned and removed from
+     flow, so the content below it doesn't jump up. Collapsed (0)
+     while the header is still part of the normal flow. */
+  .site-header-spacer {
+    height: 0;
+  }
+
+  header.site-header--pinned ~ .site-header-spacer {
+    height: var(--header-height, 3.5rem);
+  }
+
+  header .header__logo {
+    display: block;
+    position: relative;
+    /* The logo SVG fills with currentColor — without this it would
+       take the browser's default (blue) link colour. */
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    width: fit-content;
+    height: var(--header-logo-row);
+    --header-logo-row: max(1.25rem, var(--header-logo-height));
+  }
+
+  /* Slot-machine reel: both logo states are stacked vertically and
+     the whole track shifts up by exactly one row (translateY(-50%)
+     of the track's own height, which — with exactly two equal-height
+     rows — is exactly one row) when the header pins. Same technique
+     as the announcement bar's rotation. */
+  /* will-change keeps the track on its own layer at all times, so it
+     doesn't snap by half a pixel (a visible wobble) whenever a
+     transition starts or ends. */
+  header .header__logo-track {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.5s ease;
+    will-change: transform;
+  }
+
+  header .header__logo-full,
+  header .header__logo-signet {
+    display: flex;
+    align-items: center;
+    height: var(--header-logo-row);
+    flex-shrink: 0;
+  }
+
+  /* Height comes from the "Logohöhe im Header" setting; the width
+     follows from the logo's aspect ratio. Crop the uploaded file to
+     the letters (no empty space around them) so centring the box
+     centres the logo. */
+  header .header__logo-full .theme-logo,
+  header .header__logo-signet .theme-logo {
+    width: auto;
+    height: var(--header-logo-height);
+  }
+
+  header .header__logo-full .theme-logo--text {
+    height: auto;
+    font-size: var(--header-logo-height);
+  }
+
+  header .header__logo--single .header__logo-track {
+    transform: none !important;
+  }
+
+  /* Collapsed to the signet while pinned and scrolling down; a
+     separate class from --pinned so scrolling up can bring back the
+     full wordmark without also un-fixing the header (see the JS
+     below). */
+  header.site-header--logo-collapsed .header__logo-track {
+    transform: translateY(-50%);
+  }
+
+  /* Hover swaps whichever state is showing: the full wordmark rolls
+     up to the signet, and the collapsed signet rolls back down to the
+     wordmark — same slot-machine track either way. */
+  @media (hover: hover) and (pointer: fine) {
+    header .header__logo:hover .header__logo-track {
+      transform: translateY(-50%);
+    }
+
+    header.site-header--logo-collapsed .header__logo:hover .header__logo-track {
+      transform: translateY(0);
+    }
+  }
+
+  header .header__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+  }
+
+  header .header__nav a,
+  header .header__nav button {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    color: var(--color-foreground);
+    display: block;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    header .header__cart:hover,
+    header .header__menu-toggle:hover {
+      opacity: 0.8;
+    }
+  }
+
+  header .header__cart {
+    position: relative;
+  }
+
+  /* The menu drawer, opened via the native Invoker Commands API
+     (command/commandfor) — no custom JS needed to show or close it. */
+  .header-menu {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: 100%;
+    max-width: 27.5rem;
+    height: 100%;
+    max-height: 100%;
+    border: none;
+    padding: 0;
+    overflow-y: auto;
+    background-color: var(--color-drawer-background);
+    color: var(--color-foreground);
+    flex-direction: column;
+    translate: 100% 0;
+  }
+
+  @media (max-width: 749px) {
+    .header-menu {
+      width: 85%;
+      max-width: none;
+    }
+  }
+
+  /* Only apply flex display while the dialog is actually open —
+     setting `display` unconditionally on `.header-menu` would
+     override the browser's own `dialog:not([open]) { display: none; }`
+     rule and leave the closed dialog visible. */
+  .header-menu[open] {
+    display: flex;
+    translate: 0 0;
+    transition:
+      translate 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  /* Starting point for the open transition — without this the
+     dialog would just appear already on-screen, since a transition
+     only runs between two rendered states. */
+  @starting-style {
+    .header-menu[open] {
+      translate: 100% 0;
+    }
+  }
+
+  /* Set by JS the instant closing starts (see below) instead of
+     relying on the CSS-only allow-discrete/overlay mechanism (which
+     isn't reliable in every Safari version for keeping display: flex
+     alive until a close transition finishes) — JS drives the
+     slide-out instead and only calls the real .close() once it's
+     visually done. [open] is still present the whole time (that's
+     the point), so this needs to win over the [open] rule above:
+     same specificity, so it must come after it here in the file. */
+  .header-menu.is-closing {
+    translate: 100% 0;
+    transition: translate 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .header-menu::backdrop {
+    /* A black halftone dot pattern, staggered like a brick course
+       (every other row offset by half a cell) rather than a plain
+       grid — two identical layers, the second shifted diagonally.
+       Square dots via a tiny inline SVG tile (radial-gradient can
+       only draw circles/ellipses, not squares). */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+    opacity: 0;
+    transition:
+      opacity 0.8s cubic-bezier(0.65, 0, 0.35, 1),
+      display 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete,
+      overlay 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete;
+  }
+
+  .header-menu[open]::backdrop {
+    opacity: 1;
+    transition:
+      opacity 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  @starting-style {
+    .header-menu[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* Set by JS in lockstep with the box's own is-closing rule above,
+     so the scrim fades out over the same 0.6s instead of only
+     starting once .close() actually runs (which, since that's now
+     deliberately delayed until the slide-out finishes, would
+     otherwise make the scrim linger for its own full transition on
+     top of the box's). A plain CSS transition on ::backdrop like this
+     is reliable — it's specifically animating it imperatively via
+     JS (Element.animate with a pseudoElement option) that has known
+     Safari glitches. */
+  .header-menu.is-closing::backdrop {
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .header-menu__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-16) var(--page-margin);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* Same as the cart drawer's title (see snippets/cart-drawer.liquid). */
+  .header-menu__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .header-menu__close {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .header-menu__close:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .header-menu__close:focus-visible {
+    outline: none;
+  }
+
+  .header-menu__columns {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-96);
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-32);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  .header-menu__account {
+    /* Pushed to the very bottom of the drawer regardless of how
+       much link content is above it. */
+    margin-top: auto;
+    display: block;
+    padding: var(--space-16) var(--page-margin);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    color: var(--color-foreground);
+    transition: opacity 0.2s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .header-menu__account:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .header-menu__primary,
+  .header-menu__secondary {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .header-menu__primary {
+    gap: 10px;
+  }
+
+  .header-menu__secondary {
+    gap: 10px;
+  }
+
+  /* Muted (not black) until it's the current page — matching the
+     page-submenu/collection-nav convention. No hover effect: only
+     the active link is ever visually distinguished. */
+  .header-menu__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .header-menu__link.is-active {
+    gap: var(--space-6);
+  }
+
+  .header-menu__link::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .header-menu__link.is-active::before {
+    width: 4px;
+  }
+
+  /* Card count behind collection links — same as the counts in the
+     collection page heading and submenu. */
+  .header-menu__count {
+    margin-left: var(--space-2);
+    font-size: 0.7em;
+    line-height: 0;
+    letter-spacing: 0.05em;
+    /* Raise it just enough that its cap height lines up with the
+       title's: the title's cap height (1cap / 0.7 at this size) minus
+       its own. 0.3em is the fallback where the cap unit is missing. */
+    vertical-align: 0.3em;
+    vertical-align: calc(1cap / 0.7 - 1cap);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .header-menu__link:hover {
+      opacity: 0.7;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+
+    const announcementBar = document.querySelector('.announcement-bar');
+
+    const setHeaderHeight = () => {
+      document.documentElement.style.setProperty('--header-height', `${header.offsetHeight}px`);
+    };
+
+    setHeaderHeight();
+    window.addEventListener('resize', setHeaderHeight);
+
+    let ticking = false;
+    let lastScrollY = Math.max(window.scrollY, 0);
+
+    // Sticky submenu (collection nav, page submenu): scrolls away with
+    // the page while scrolling down; scrolling up slides it back in
+    // below the (always fixed) bar, scrolling down slides it out
+    // again. Back at its own place in the page it rejoins the flow.
+    const submenu = document.querySelector('[data-sticky-submenu]');
+    const submenuGap = 16; // the --space-16 above the submenu, kept while stuck
+    const root = document.documentElement;
+    let submenuSpacer = null;
+    let submenuShown = false;
+    let submenuTop = 0; // scroll position where the submenu reaches the top
+
+    const measureSubmenu = () => {
+      const anchor = submenuSpacer || submenu;
+      submenuTop = anchor.getBoundingClientRect().top + window.scrollY - submenuGap;
+      root.style.setProperty('--submenu-height', `${submenu.offsetHeight}px`);
+    };
+
+    const setSubmenuShown = (shown) => {
+      submenuShown = shown;
+      submenu.classList.toggle('is-hidden', !shown);
+      root.classList.toggle('submenu-shown', shown);
+    };
+
+    const stickSubmenu = () => {
+      submenuSpacer = document.createElement('div');
+      submenuSpacer.setAttribute('aria-hidden', 'true');
+      submenuSpacer.style.height = `${submenu.offsetHeight}px`;
+      submenuSpacer.style.gridColumn = getComputedStyle(submenu).gridColumn;
+      submenu.before(submenuSpacer);
+      // Start out of view without animating there, then slide in
+      submenu.style.transition = 'none';
+      submenu.classList.add('is-stuck', 'is-hidden');
+      void submenu.offsetHeight;
+      submenu.style.transition = '';
+      setSubmenuShown(true);
+    };
+
+    const unstickSubmenu = () => {
+      submenu.classList.remove('is-stuck', 'is-hidden');
+      submenuSpacer.remove();
+      submenuSpacer = null;
+      setSubmenuShown(false);
+    };
+
+    const updateSubmenu = (delta) => {
+      const scrollY = Math.max(window.scrollY, 0);
+      // Its own place in the page is below the bar: back in the flow
+      const inPlace = scrollY <= submenuTop - header.offsetHeight;
+
+      if (submenuSpacer) {
+        if (inPlace) unstickSubmenu();
+        else if (delta > 0 && submenuShown) setSubmenuShown(false);
+        else if (delta < 0 && !submenuShown) setSubmenuShown(true);
+      } else if (!inPlace && delta < 0) {
+        stickSubmenu();
+      }
+    };
+
+    if (submenu) {
+      measureSubmenu();
+      const remeasure = () => {
+        if (submenuSpacer) submenuSpacer.style.height = `${submenu.offsetHeight}px`;
+        measureSubmenu();
+      };
+      window.addEventListener('resize', remeasure);
+      window.addEventListener('load', remeasure);
+    }
+
+    const update = () => {
+      const currentScrollY = Math.max(window.scrollY, 0);
+      const threshold = announcementBar ? announcementBar.offsetHeight : 0;
+      const isScrollingUp = currentScrollY < lastScrollY;
+      const isPinned = currentScrollY > threshold;
+
+      header.classList.toggle('site-header--pinned', isPinned);
+      // Collapse to the signet while pinned and scrolling down; scrolling
+      // up brings back the full wordmark regardless of how far down the
+      // page you are.
+      header.classList.toggle('site-header--logo-collapsed', isPinned && !isScrollingUp);
+
+      if (submenu) updateSubmenu(currentScrollY - lastScrollY);
+
+      lastScrollY = currentScrollY;
+      ticking = false;
+    };
+
+    update();
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+
+    const menu = document.getElementById('header-menu');
+    if (menu) {
+      const closeMenuAnimated = () => {
+        if (menu.classList.contains('is-closing')) return;
+        menu.classList.add('is-closing');
+      };
+
+      // The is-closing class (above) starts the slide-out; once it
+      // finishes, actually close the dialog (removing [open], which
+      // is what takes it out of the top layer for real). Guarded to
+      // the box's own translate transition specifically (not the
+      // ::backdrop's separate opacity one, which fires its own
+      // transitionend on the same element).
+      menu.addEventListener('transitionend', (event) => {
+        if (
+          event.target === menu &&
+          event.propertyName === 'translate' &&
+          !event.pseudoElement &&
+          menu.classList.contains('is-closing')
+        ) {
+          menu.classList.remove('is-closing');
+          menu.close();
+        }
+      });
+
+      // Escape key and native light-dismiss (closedby="any") both
+      // fire this cancelable event before closing — pre-empt it to
+      // animate first instead of closing instantly.
+      menu.addEventListener('cancel', (event) => {
+        event.preventDefault();
+        closeMenuAnimated();
+      });
+
+      // A click lands directly on the <dialog> element itself only
+      // when it hits the backdrop, never when it hits something
+      // inside it.
+      menu.addEventListener('click', (event) => {
+        if (event.target === menu) closeMenuAnimated();
+      });
+
+      menu.querySelector('[data-drawer-close]')?.addEventListener('click', closeMenuAnimated);
+    }
+
+    // Opens either drawer. Needed instead of the native
+    // command="show-modal" invoker because closing is deliberately
+    // delayed (see closeMenuAnimated/closeDrawerAnimated) until its
+    // fade-out finishes, so the dialog can still be `.open` for up to
+    // 600ms after the user asked to close it — and calling
+    // .showModal() on a dialog that's still open throws and silently
+    // does nothing. This finishes any pending close instantly first.
+    document.querySelectorAll('[data-drawer-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const dialog = document.getElementById(button.dataset.drawerOpen);
+        if (!dialog) return;
+
+        if (dialog.classList.contains('is-closing')) {
+          dialog.classList.remove('is-closing');
+          if (dialog.open) dialog.close();
+        }
+
+        if (dialog.id === 'cart-drawer' && window.ThemeCart) {
+          window.ThemeCart.show();
+        } else {
+          dialog.showModal();
+        }
+      });
+    });
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.header",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu_primary",
+      "label": "t:labels.menu_primary"
+    },
+    {
+      "type": "link_list",
+      "id": "menu_secondary",
+      "label": "t:labels.menu_secondary"
+    }
+  ],
+  "enabled_on": {
+    "groups": ["header"]
+  }
+}
+{% endschema %}

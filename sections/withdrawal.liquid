@@ -1,0 +1,49 @@
+{% comment %}
+  Withdrawal page as its own section, so it can go on any template
+  without the "Einfache Seite" around it: headline on the left, an
+  optional intro text and the withdrawal form (blocks/withdrawal-form.liquid,
+  a static block) on the right. Same layout classes as
+  sections/simple-page.liquid, so both page types line up. Those classes
+  are styled in simple-page's stylesheet tag, which Shopify bundles
+  for every page, hence the ValidScopedCSSClass disable below.
+{% endcomment %}
+{% # theme-check-disable ValidScopedCSSClass %}
+
+<div class="simple-page-header full-width">
+  <div class="simple-page-body">
+    {% if section.settings.headline != blank %}
+      <p class="simple-page-headline">{{ section.settings.headline }}</p>
+    {% endif %}
+
+    <div class="simple-page-content">
+      {% if section.settings.text != blank %}
+        <div class="simple-page-item__body rte">{{ section.settings.text }}</div>
+      {% endif %}
+
+      {% content_for 'block', type: 'withdrawal-form', id: 'withdrawal-form' %}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "t:general.withdrawal_form",
+  "settings": [
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "t:labels.headline",
+      "default": "Vertrag widerrufen"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    }
+  ],
+  "presets": [{ "name": "t:general.withdrawal_form" }],
+  "enabled_on": {
+    "templates": ["page"]
+  }
+}
+{% endschema %}

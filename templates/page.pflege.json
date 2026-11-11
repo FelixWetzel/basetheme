@@ -1,0 +1,110 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "faq_PNcGwL": {
+      "type": "faq",
+      "blocks": {
+        "faq_topic_jtHq8E": {
+          "type": "faq-topic",
+          "name": "t:general.faq_topic",
+          "settings": {
+            "heading": "Thema 1"
+          },
+          "blocks": {
+            "faq_question_XYiiRi": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 1?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_DRLJFp": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 2?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_8d9nA4": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 3?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "faq_question_XYiiRi",
+            "faq_question_DRLJFp",
+            "faq_question_8d9nA4"
+          ]
+        },
+        "faq_topic_famEPg": {
+          "type": "faq-topic",
+          "settings": {
+            "heading": "Thema 2"
+          },
+          "blocks": {
+            "faq_question_xYMGhz": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 4?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_3eKjr3": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 5?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_XD8DRG": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 6?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "faq_question_xYMGhz",
+            "faq_question_3eKjr3",
+            "faq_question_XD8DRG"
+          ]
+        }
+      },
+      "block_order": [
+        "faq_topic_jtHq8E",
+        "faq_topic_famEPg"
+      ],
+      "name": "t:general.faq",
+      "settings": {
+        "submenu": "footer",
+        "headline": "Überschrift",
+        "text": ""
+      }
+    }
+  },
+  "order": [
+    "faq_PNcGwL"
+  ]
+}

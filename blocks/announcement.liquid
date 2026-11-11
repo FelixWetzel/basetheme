@@ -1,0 +1,60 @@
+{% doc %}
+  Renders a single announcement message, optionally linked. Meant to be
+  used inside the announcement-bar section, which rotates through all
+  of its announcement blocks.
+
+  @example
+  {% content_for 'block', type: 'announcement', id: 'announcement' %}
+{% enddoc %}
+
+{% capture content %}
+  {%- if block.settings.text_mobile != blank -%}
+    <span class="announcement-bar__text announcement-bar__text--desktop">{{ block.settings.text }}</span>
+    <span class="announcement-bar__text announcement-bar__text--mobile">{{ block.settings.text_mobile }}</span>
+  {%- else -%}
+    <span class="announcement-bar__text">{{ block.settings.text }}</span>
+  {%- endif -%}
+  {%- if block.settings.cta != blank -%}
+    <span class="announcement-bar__cta cta">{{ block.settings.cta }}</span>
+  {%- endif -%}
+{% endcapture %}
+
+<p class="announcement-bar__item" {{ block.shopify_attributes }}>
+  {% if block.settings.link != blank %}
+    <a href="{{ block.settings.link }}">{{ content }}</a>
+  {% else %}
+    {{ content }}
+  {% endif %}
+</p>
+
+{% schema %}
+{
+  "name": "t:general.announcement",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Announcement"
+    },
+    {
+      "type": "text",
+      "id": "text_mobile",
+      "label": "t:labels.text_mobile",
+      "info": "t:labels.text_mobile_info"
+    },
+    {
+      "type": "text",
+      "id": "cta",
+      "label": "t:labels.cta",
+      "info": "t:labels.cta_info"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link"
+    }
+  ],
+  "presets": [{ "name": "t:general.announcement" }]
+}
+{% endschema %}

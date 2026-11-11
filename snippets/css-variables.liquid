@@ -1,0 +1,57 @@
+{%- liquid
+  # Font: either from Shopify's font library (font_picker) or an own
+  # webfont file (Theme-Einstellungen → Typografie). An own file can be
+  # a file name in assets/ (e.g. MyFont-Regular.woff2) or a full URL,
+  # e.g. one copied from Inhalte → Dateien.
+  assign custom_font = false
+  if settings.font_source == 'custom' and settings.font_custom_name != blank and settings.font_custom_file != blank
+    assign custom_font = true
+    if settings.font_custom_file contains '//'
+      assign custom_font_url = settings.font_custom_file
+    else
+      assign custom_font_url = settings.font_custom_file | asset_url
+    endif
+  endif
+  assign font_features = settings.font_feature_settings | default: 'normal'
+  assign font_features_menu = settings.font_feature_settings_menu | default: font_features
+-%}
+{% style %}
+  {%- if custom_font %}
+  @font-face {
+    font-family: '{{ settings.font_custom_name }}';
+    src: url('{{ custom_font_url }}');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  {%- else %}
+  {{ settings.font_primary | font_face: font_display: 'swap' }}
+  {%- endif %}
+
+  :root {
+    {%- if custom_font %}
+    --font-primary--family: '{{ settings.font_custom_name }}', Helvetica, Arial, sans-serif;
+    --font-primary--style: normal;
+    --font-primary--weight: 400;
+    {%- else %}
+    --font-primary--family: {{ settings.font_primary.family }}, {{ settings.font_primary.fallback_families }};
+    --font-primary--style: {{ settings.font_primary.style }};
+    --font-primary--weight: {{ settings.font_primary.weight }};
+    {%- endif %}
+    --font-primary--feature-settings: {{ font_features }};
+    {% # Only used in the menu (header bar, menu drawer, cart drawer count, e.g. "Menü (2)"), so running text keeps normal parentheses. "case" 1 swaps ( ) for the capital-height form, if the font has one %}
+    --font-primary--feature-settings-versal: {{ font_features_menu }};
+    --signet-scale: {{ settings.signet_scale | default: 12 | divided_by: 100.0 }};
+    --page-margin: {{ settings.min_page_margin }}px;
+    --color-background: {{ settings.background_color }};
+    --color-foreground: {{ settings.foreground_color }};
+    --color-header-background: color-mix(in srgb, var(--color-background) {{ settings.header_opacity | default: 100 }}%, transparent);
+    --color-drawer-background: color-mix(in srgb, var(--color-background) {{ settings.drawer_opacity | default: 100 }}%, transparent);
+  }
+
+  @media (max-width: 749px) {
+    :root {
+      --page-margin: {{ settings.min_page_margin_mobile }}px;
+    }
+  }
+{% endstyle %}

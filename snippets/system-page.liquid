@@ -1,0 +1,70 @@
+{% doc %}
+  Wraps a page Shopify renders itself inside the theme layout — e.g.
+  the newsletter double opt-in confirmation (/account/subscribe) or
+  the unsubscribe page — whose markup comes from Shopify and can't be
+  templated. It's laid out like the policy pages (see
+  sections/policy-page.liquid) and Shopify's own markup is restyled
+  to match. Shopify's heading (just the shop's internal name) is
+  hidden in favour of our own.
+
+  @param {string} content - The page's content_for_layout
+  @param {string} heading - Translation key for the headline
+
+  @example
+  {% render 'system-page', content: content_for_layout, heading: 'general.newsletter.page_heading' %}
+{% enddoc %}
+
+<div class="system-page full-width">
+  <p class="system-page__headline">{{ heading | t }}</p>
+
+  <div class="system-page__content">
+    {{ content }}
+  </div>
+</div>
+
+{% stylesheet %}
+  .system-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+    padding: var(--space-16) var(--page-margin) var(--space-96);
+  }
+
+  .system-page__headline {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .system-page__content h1,
+  .system-page__content h2 {
+    display: none;
+  }
+
+  /* Shopify centres its content in a narrow box of its own —
+     reset that so the text sits flush left like everywhere else. */
+  .system-page__content * {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+  }
+
+  /* E.g. the "Abmelden" link below the confirmation text — no
+     underline, set apart from the text above it. */
+  .system-page__content a {
+    display: inline-block;
+    margin-top: var(--space-16);
+    color: var(--color-foreground);
+    text-decoration: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .system-page__content a:hover {
+      opacity: 0.7;
+    }
+  }
+{% endstylesheet %}

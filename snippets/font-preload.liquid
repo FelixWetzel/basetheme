@@ -1,0 +1,13 @@
+{% doc %}
+  Preloads the primary font (Theme-Einstellungen → Typografie), so text
+  doesn't flash in the fallback font. System fonts need no preload.
+{% enddoc %}
+{%- if settings.font_source == 'custom' and settings.font_custom_name != blank and settings.font_custom_file != blank -%}
+  {%- if settings.font_custom_file contains '//' -%}
+    {{ settings.font_custom_file | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+  {%- else -%}
+    {{ settings.font_custom_file | asset_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+  {%- endif -%}
+{%- elsif settings.font_source != 'custom' and settings.font_primary.system? == false -%}
+  {{ settings.font_primary | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+{%- endif -%}

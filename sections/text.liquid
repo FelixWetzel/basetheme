@@ -1,0 +1,171 @@
+{% comment %}
+  Editorial text section for the homepage and pages. Two variants:
+  - Small (default): optional headline in the left half and the text
+    in the right half on desktop — the same split as the text part of
+    sections/media-text.liquid, just without media. Stacked on mobile.
+  - Large: a single large statement across the full width, no
+    headline (e.g. "Wir stehen für progressives Design…").
+  The text is clamped to four lines (the large one to six on mobile)
+  with a "+ Mehr lesen" toggle when longer (snippets/read-more.liquid).
+  Top and bottom spacing are selectable so the section can sit tight
+  against its neighbours or stand apart from them.
+{% endcomment %}
+
+{% liquid
+  assign show_heading = false
+  if section.settings.large_text == false and section.settings.heading != blank
+    assign show_heading = true
+  endif
+%}
+
+{% if section.settings.text_rich != blank or show_heading %}
+  <div class="text-section text-section--spacing-{{ section.settings.spacing_top }} text-section--spacing-bottom-{{ section.settings.spacing_bottom }}{% if section.settings.large_text %} text-section--large{% endif %}{% unless show_heading %} text-section--text-{{ section.settings.text_position }}{% endunless %} full-width">
+    {% if show_heading %}
+      <p class="text-section__heading">{{ section.settings.heading }}</p>
+    {% endif %}
+
+    {% if section.settings.text_rich != blank %}
+      {% render 'read-more', text: section.settings.text_rich, rich: true, class: 'text-section__text' %}
+    {% endif %}
+  </div>
+{% endif %}
+
+{% stylesheet %}
+  .text-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: var(--space-16) var(--page-margin);
+    color: var(--color-foreground);
+  }
+
+  .text-section--spacing-large {
+    padding-top: var(--space-96);
+  }
+
+  .text-section--spacing-bottom-large {
+    padding-bottom: var(--space-96);
+  }
+
+  .text-section__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  /* The wrapper of the clamped text + "Mehr lesen" toggle
+     (snippets/read-more.liquid); the large size goes on the text only,
+     so the toggle stays at the normal size. */
+  /* More air between the large statement and the normal-size
+     toggle below it than the default 2px. */
+  .text-section--large .read-more {
+    gap: var(--space-12);
+  }
+
+  .text-section--large .read-more__text {
+    font-size: 1.5rem;
+    line-height: 1.6875rem;
+    letter-spacing: 0.12px;
+  }
+
+  /* Fewer words per line at the large size on mobile, so six lines
+     before clamping instead of four. */
+  @media (max-width: 749px) {
+    .text-section--large .read-more__text:not(.is-expanded) {
+      -webkit-line-clamp: 6;
+    }
+  }
+
+  @media (min-width: 750px) {
+    /* Same 4-column grid as the footer and hero text: the small
+       variant puts the headline over the left two columns and the
+       text over the right two; the large one spans all four. */
+    .text-section {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+    }
+
+    .text-section__heading {
+      grid-column: 1 / 3;
+    }
+
+    .text-section__text {
+      grid-column: 3 / 5;
+    }
+
+    /* Without a headline, the text can take the left half instead
+       (setting). The large variant spans all four columns either way. */
+    .text-section--text-left .text-section__text {
+      grid-column: 1 / 3;
+    }
+
+    .text-section--large .text-section__text {
+      grid-column: 1 / -1;
+    }
+
+    .text-section--large .read-more__text {
+      font-size: 2rem;
+      line-height: 2.25rem;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.text",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "large_text",
+      "label": "t:labels.large_text",
+      "info": "t:labels.large_text_info",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.headline",
+      "info": "t:labels.text_heading_info"
+    },
+    {
+      "type": "richtext",
+      "id": "text_rich",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "select",
+      "id": "text_position",
+      "label": "t:labels.text_position",
+      "info": "t:labels.text_position_info",
+      "options": [
+        { "value": "left", "label": "t:options.alignment.left" },
+        { "value": "right", "label": "t:options.alignment.right" }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "select",
+      "id": "spacing_top",
+      "label": "t:labels.spacing_top",
+      "options": [
+        { "value": "small", "label": "t:options.spacing_top.small" },
+        { "value": "large", "label": "t:options.spacing_top.large" }
+      ],
+      "default": "small"
+    },
+    {
+      "type": "select",
+      "id": "spacing_bottom",
+      "label": "t:labels.spacing_bottom",
+      "options": [
+        { "value": "small", "label": "t:options.spacing_top.small" },
+        { "value": "large", "label": "t:options.spacing_top.large" }
+      ],
+      "default": "small"
+    }
+  ],
+  "presets": [{ "name": "t:general.text" }],
+  "enabled_on": {
+    "templates": ["index", "page"]
+  }
+}
+{% endschema %}

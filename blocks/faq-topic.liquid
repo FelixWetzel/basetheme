@@ -1,0 +1,62 @@
+<div class="faq-topic" {{ block.shopify_attributes }}>
+  {% if block.settings.heading != blank %}
+    <p class="faq-topic__heading">{{ block.settings.heading }}</p>
+  {% endif %}
+
+  <div class="faq-topic__accordion">
+    {% content_for 'blocks' %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .faq-topic {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .faq-topic__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .faq-topic__accordion {
+    display: flex;
+    flex-direction: column;
+    /* The closing line for the whole group, set once here rather
+       than per-item via :last-child on .faq-accordion — each question
+       block can end up wrapped in its own container depending on how
+       content_for 'blocks' renders it, which makes :last-child match
+       every item's own wrapper (each "the last child" of itself)
+       instead of just the actual last question, doubling up the
+       border between adjacent items. */
+    border-bottom: 1px solid var(--color-border);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.faq_topic",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Thema"
+    }
+  ],
+  "blocks": [
+    { "type": "faq-question" }
+  ],
+  "presets": [
+    {
+      "name": "t:general.faq_topic",
+      "blocks": [
+        { "type": "faq-question" },
+        { "type": "faq-question" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,200 @@
+{% comment %}
+  A merchant-curated grid of up to 4 products (e.g. for the homepage)
+  — same product-card styling and column layout as the collection and
+  recommendations grids. Top and bottom spacing are selectable, as on
+  sections/text.liquid — large (96px, the default) or small (16px).
+  An optional color name per slot ("Farbe für Produkt 1–4") renders
+  that color variant's card instead of the whole product.
+{% endcomment %}
+
+<div class="product-grid product-grid--spacing-{{ section.settings.spacing_top }} product-grid--spacing-bottom-{{ section.settings.spacing_bottom }}{% if section.settings.heading == blank and section.settings.cta_text == blank %} product-grid--no-header{% endif %} full-width">
+  {% if section.settings.heading != blank or section.settings.cta_text != blank %}
+    <div class="product-grid__header">
+      {% if section.settings.heading != blank %}
+        <p class="product-grid__heading">{{ section.settings.heading }}</p>
+      {% endif %}
+
+      {% if section.settings.cta_text != blank %}
+        <a href="{{ section.settings.link }}" class="product-grid__cta cta">{{ section.settings.cta_text }}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="product-grid__grid">
+    {% for product in section.settings.products limit: 4 %}
+      {% liquid
+        # "Farbe für Produkt N": show that color's card, as the collection does
+        # for a product split by color. Empty or unknown names keep the whole product.
+        assign color_setting = 'color_' | append: forloop.index
+        assign wanted_color = section.settings[color_setting] | strip | downcase
+        assign card_variant = nil
+        if wanted_color != blank
+          assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+          unless color_option
+            assign color_option = product.options_with_values | where: 'name', 'Color' | first
+          endunless
+          if color_option
+            assign color_index = color_option.position | minus: 1
+            for candidate in product.variants
+              assign candidate_color = candidate.options[color_index] | downcase
+              if candidate_color == wanted_color
+                assign card_variant = candidate
+                break
+              endif
+            endfor
+          endif
+        endif
+      %}
+      {% if card_variant %}
+        {% render 'product-card', product: product, variant: card_variant %}
+      {% else %}
+        {% render 'product-card', product: product %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .product-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding: var(--space-96) var(--page-margin);
+  }
+
+  .product-grid--spacing-small {
+    padding-top: var(--space-16);
+  }
+
+  .product-grid--spacing-bottom-small {
+    padding-bottom: var(--space-16);
+  }
+
+  /* Without a header row (no heading, no CTA) and small top spacing,
+     the gap above the cards is a single 16px: none of its own after a
+     section that already leaves 16px below itself (text, ticker,
+     another grid …), but 16px right after one that ends on an image
+     (banners, media-text without heading and text). */
+  .product-grid--no-header.product-grid--spacing-small {
+    padding-top: 0;
+  }
+
+  .shopify-section:has(> :is(.hero-banner, .hero-banner-two-up, .headline-banner, .media-text--no-content))
+    + .shopify-section
+    > .product-grid--no-header.product-grid--spacing-small {
+    padding-top: var(--space-16);
+  }
+
+  .product-grid__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+  }
+
+  .product-grid__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .product-grid__cta {
+    flex-shrink: 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-grid__cta:hover {
+      opacity: 0.7;
+    }
+  }
+
+  .product-grid__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-32) var(--space-2);
+  }
+
+  @media (min-width: 750px) {
+    .product-grid__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_grid",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading"
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "t:labels.cta_text"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "t:labels.products",
+      "limit": 4,
+      "info": "t:labels.products_info"
+    },
+    {
+      "type": "text",
+      "id": "color_1",
+      "label": "t:labels.product_grid_color_1",
+      "info": "t:labels.product_grid_color_info"
+    },
+    {
+      "type": "text",
+      "id": "color_2",
+      "label": "t:labels.product_grid_color_2"
+    },
+    {
+      "type": "text",
+      "id": "color_3",
+      "label": "t:labels.product_grid_color_3"
+    },
+    {
+      "type": "text",
+      "id": "color_4",
+      "label": "t:labels.product_grid_color_4"
+    },
+    {
+      "type": "select",
+      "id": "spacing_top",
+      "label": "t:labels.spacing_top",
+      "options": [
+        { "value": "small", "label": "t:options.spacing_top.small" },
+        { "value": "large", "label": "t:options.spacing_top.large" }
+      ],
+      "default": "large"
+    },
+    {
+      "type": "select",
+      "id": "spacing_bottom",
+      "label": "t:labels.spacing_bottom",
+      "options": [
+        { "value": "small", "label": "t:options.spacing_top.small" },
+        { "value": "large", "label": "t:options.spacing_top.large" }
+      ],
+      "default": "large"
+    }
+  ],
+  "presets": [{ "name": "t:general.product_grid" }],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

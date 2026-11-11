@@ -1,0 +1,690 @@
+{% doc %}
+  Renders a single product card for a collection grid: an image
+  slideshow (swipeable on touch, with clickable dots when there's more
+  than one image), an optional badge, title, price and the number of
+  available color variants (or, with only one, its name).
+
+  When `variant` is given (a collection splitting a multi-color
+  product into one card per color), the slideshow shows that
+  variant's own photos from its `custom.gallery` metafield (a "List
+  of files" metafield on the Variant — Shopify's native variant image
+  field only allows one photo, so this metafield is the workaround
+  for several). Falls back to the product's shared images when that
+  metafield is empty. The card still links and prices itself to that
+  specific variant via `?variant=`.
+
+  Without `variant`, a product with only one shared image falls back
+  to its default variant's `custom.gallery`, so the card still gets a
+  slideshow.
+
+  Product images that are only there as a native variant image for
+  variants which all have their own `custom.gallery` (set so checkout
+  and order emails show the right colour) don't count as shared
+  images and never show on the card.
+
+  Quick add: a "+" in the image's bottom corner (on hover on desktop,
+  always on touch) adds the card's variant (with `variant`, that one;
+  otherwise the first available) straight to the cart and opens the
+  cart drawer (assets/product-card.js) — or, with the theme setting
+  "quick_add_behavior" on "feedback", shows a small mini-cart-style
+  notice sliding up from the bottom and updates the cart count. On desktop hover, "Hinzufügen" fades in before the "+". If the product has another
+  option with several values (e.g. a size), it links to the product
+  page instead, rather than guessing; sold out, there's none.
+
+  The badge reads from the `custom.label` product metafield (single
+  line text) — merchants set it per product in the admin, leave it
+  blank to hide it. A sold-out product (or, with `variant`, a sold-out
+  variant) shows "Ausverkauft" raised after its title, like the
+  collection counts in the headings.
+
+  @param {product} product - The product to render
+  @param {variant} [variant] - A specific variant to render the card for
+
+  @example
+  {% render 'product-card', product: product %}
+  {% render 'product-card', product: product, variant: variant %}
+{% enddoc %}
+
+{% liquid
+  assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+  unless color_option
+    assign color_option = product.options_with_values | where: 'name', 'Color' | first
+  endunless
+  if color_option
+    assign color_count = color_option.values.size
+    assign color_index = color_option.position | minus: 1
+    assign color_variant = variant | default: product.selected_or_first_available_variant
+    assign color_name = color_variant.options[color_index]
+  endif
+
+  assign badge = product.metafields.custom.label
+  assign card_available = product.available
+  if variant
+    assign card_available = variant.available
+  endif
+
+  assign card_price = product.price
+  assign card_url = product.url
+  if collection
+    assign card_url = card_url | within: collection
+  endif
+  if variant
+    assign card_price = variant.price
+    assign card_url = card_url | append: '?variant=' | append: variant.id
+  endif
+
+  # Images only attached to variants that have their own gallery anyway
+  assign skipped_image_ids = ','
+  assign skipped_image_count = 0
+  for image in product.images
+    if image.variants.size == 0
+      continue
+    endif
+    assign image_has_ungalleried_variant = false
+    for image_variant in image.variants
+      if image_variant.metafields.custom.gallery.value.size == 0
+        assign image_has_ungalleried_variant = true
+        break
+      endif
+    endfor
+    unless image_has_ungalleried_variant
+      assign skipped_image_ids = skipped_image_ids | append: image.id | append: ','
+      assign skipped_image_count = skipped_image_count | plus: 1
+    endunless
+  endfor
+  assign shared_image_count = product.images.size | minus: skipped_image_count
+
+  assign variant_gallery = variant.metafields.custom.gallery.value
+  # A whole-product card with a single shared image shows its default variant's gallery instead
+  if variant == blank and shared_image_count < 2
+    assign variant_gallery = product.selected_or_first_available_variant.metafields.custom.gallery.value
+  endif
+  assign has_variant_gallery = false
+  if variant_gallery.size > 0
+    assign has_variant_gallery = true
+  endif
+
+  assign variant_image = variant.featured_image
+
+  if has_variant_gallery
+    assign gallery_image_count = variant_gallery.size
+  else
+    assign gallery_image_count = shared_image_count
+  endif
+
+  # Cards show at most this many images; the product page shows them all
+  assign max_card_images = 5
+
+  # Quick add: only when the card's variant is unambiguous — every
+  # option apart from the colour has a single value
+  assign quick_add_variant = variant | default: product.selected_or_first_available_variant
+  assign quick_add_direct = true
+  for option in product.options_with_values
+    if option.name == 'Farbe' or option.name == 'Color'
+      continue
+    endif
+    if option.values.size > 1
+      assign quick_add_direct = false
+    endif
+  endfor
+
+  assign has_multiple_images = false
+  if gallery_image_count > 1
+    assign has_multiple_images = true
+  endif
+%}
+
+<div class="product-card">
+  <div class="product-card__media">
+    <a href="{{ card_url }}" class="product-card__media-link" aria-label="{{ product.title | escape }}">
+      <div class="product-card__images" {% if has_multiple_images %}data-product-card-slideshow{% endif %}>
+        {% if has_variant_gallery %}
+          {% for file in variant_gallery limit: max_card_images %}
+            {% assign gallery_image = file.preview_image %}
+            {% if gallery_image %}
+              <img
+                class="product-card__image"
+                src="{{ gallery_image | image_url: width: 400 }}"
+                srcset="
+                  {{ gallery_image | image_url: width: 400 }} 1x,
+                  {{ gallery_image | image_url: width: 800 }} 2x
+                "
+                alt="{{ gallery_image.alt | default: product.title | escape }}"
+                loading="lazy"
+                width="{{ gallery_image.width }}"
+                height="{{ gallery_image.height }}"
+              >
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          {% if variant_image %}
+            <img
+              class="product-card__image"
+              src="{{ variant_image | image_url: width: 400 }}"
+              srcset="
+                {{ variant_image | image_url: width: 400 }} 1x,
+                {{ variant_image | image_url: width: 800 }} 2x
+              "
+              alt="{{ variant_image.alt | default: product.title | escape }}"
+              loading="lazy"
+              width="{{ variant_image.width }}"
+              height="{{ variant_image.height }}"
+            >
+          {% endif %}
+          {% if variant_image %}{% assign card_image_count = 1 %}{% else %}{% assign card_image_count = 0 %}{% endif %}
+          {% for image in product.images %}
+            {% if card_image_count >= max_card_images %}{% break %}{% endif %}
+            {% assign image_needle = ',' | append: image.id | append: ',' %}
+            {% unless skipped_image_ids contains image_needle or variant_image and image == variant_image %}
+              {% assign card_image_count = card_image_count | plus: 1 %}
+              <img
+                class="product-card__image"
+                src="{{ image | image_url: width: 400 }}"
+                srcset="
+                  {{ image | image_url: width: 400 }} 1x,
+                  {{ image | image_url: width: 800 }} 2x
+                "
+                alt="{{ image.alt | default: product.title | escape }}"
+                loading="lazy"
+                width="{{ image.width }}"
+                height="{{ image.height }}"
+              >
+            {% endunless %}
+          {% else %}
+            {{ 'product-1' | placeholder_svg_tag: 'product-card__image product-card__image--placeholder' }}
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      {% if badge != blank %}
+        <span class="product-card__badge">{{ badge }}</span>
+      {% endif %}
+    </a>
+
+    {% if has_multiple_images %}
+      <div class="product-card__dots" role="tablist" aria-label="{{ 'products.card.images' | t }}">
+        {% if has_variant_gallery %}
+          {% for file in variant_gallery limit: max_card_images %}
+            <button
+              type="button"
+              class="product-card__dot{% if forloop.first %} is-active{% endif %}"
+              aria-label="{{ 'products.card.image' | t: index: forloop.index }}"
+            ></button>
+          {% endfor %}
+        {% else %}
+          {% if variant_image %}
+            <button type="button" class="product-card__dot is-active" aria-label="{{ 'products.card.image' | t: index: 1 }}"></button>
+          {% endif %}
+          {% assign dot_index = 1 %}
+          {% if variant_image %}{% assign card_dot_count = 1 %}{% else %}{% assign card_dot_count = 0 %}{% endif %}
+          {% for image in product.images %}
+            {% if card_dot_count >= max_card_images %}{% break %}{% endif %}
+            {% assign image_needle = ',' | append: image.id | append: ',' %}
+            {% unless skipped_image_ids contains image_needle or variant_image and image == variant_image %}
+              <button
+                type="button"
+                class="product-card__dot{% if variant_image == blank and dot_index == 1 %} is-active{% endif %}"
+                aria-label="{{ 'products.card.image' | t: index: dot_index }}"
+              ></button>
+              {% assign dot_index = dot_index | plus: 1 %}
+              {% assign card_dot_count = card_dot_count | plus: 1 %}
+            {% endunless %}
+          {% endfor %}
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if card_available and quick_add_variant.available %}
+      {% if quick_add_direct %}
+        <button
+          type="button"
+          class="product-card__quick-add"
+          data-quick-add
+          data-variant-id="{{ quick_add_variant.id }}"
+          data-fallback-url="{{ card_url }}"
+          data-added-label="{{ 'products.card.added' | t | escape }}"
+          {% if settings.quick_add_behavior == 'feedback' %}
+            {%- liquid
+              assign added_image = null
+              for file in variant_gallery
+                assign added_image = file.preview_image
+                break
+              endfor
+              unless added_image
+                assign added_image = quick_add_variant.featured_image | default: product.featured_image
+              endunless
+            -%}
+            data-quick-add-feedback
+            data-added-title="{{ product.title | escape }}"
+            data-added-message="{{ 'products.card.added_message' | t | escape }}"
+            data-view-cart-label="{{ 'products.card.view_cart' | t | escape }}"
+            {% if added_image %}
+              data-added-image="{{ added_image | image_url: width: 160 }}"
+            {% endif %}
+          {% endif %}
+          aria-label="{{ 'products.add_to_cart' | t }}: {{ product.title | escape }}"
+        >
+          <span class="product-card__quick-add-inner" aria-hidden="true">
+            <span class="icon-plus"></span>
+            <span class="product-card__quick-add-label"><span>{{ 'products.card.quick_add' | t }}</span></span>
+          </span>
+        </button>
+      {% else %}
+        <a
+          href="{{ card_url }}"
+          class="product-card__quick-add"
+          aria-label="{{ 'products.card.choose_options' | t }}: {{ product.title | escape }}"
+        >
+          <span class="product-card__quick-add-inner" aria-hidden="true">
+            <span class="icon-plus"></span>
+            <span class="product-card__quick-add-label"><span>{{ 'products.card.choose_options' | t }}</span></span>
+          </span>
+        </a>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <a href="{{ card_url }}" class="product-card__info">
+    <p class="product-card__title">
+      {{- product.title -}}
+      {%- if settings.show_sold_out_label and card_available == false -%}
+        <sup class="product-card__sold-out">{{ 'products.sold_out' | t }}</sup>
+      {%- endif -%}
+    </p>
+    <p class="product-card__price">{{ card_price | divided_by: 100 }} €</p>
+    {% if color_count > 0 %}
+      <div class="product-card__colors-wrap">
+        <p class="product-card__colors">
+          {%- if color_count == 1 -%}
+            {{ color_option.values.first.name }}
+          {%- else -%}
+            <span class="product-card__colors-count">{{ 'products.card.colors' | t: count: color_count }}</span>
+            <span class="product-card__colors-name">{{ color_name }}</span>
+          {%- endif -%}
+        </p>
+        <div class="product-card__swatches" aria-hidden="true">
+          {% for value in color_option.values %}
+            {% assign swatch_delay = forloop.index0 | times: 0.015 %}
+            <span
+              class="product-card__swatch-dot"
+              style="background-color: {{ value.swatch.color | default: '#cccccc' }};{% if value.swatch.image %} background-image: url({{ value.swatch.image | image_url: width: 30 }});{% endif %} transition-delay: {{ swatch_delay }}s;"
+            ></span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </a>
+</div>
+
+{% stylesheet %}
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .product-card__media {
+    position: relative;
+    aspect-ratio: 192 / 240;
+    overflow: hidden;
+  }
+
+  .product-card__media-link {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* 6px sideways: the badge's inset, matching the quick add "+" */
+    padding: var(--space-4) var(--space-6) var(--space-8);
+    text-decoration: none;
+  }
+
+  .product-card__images {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: transform 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-card:hover .product-card__images {
+      transform: scale(1.03);
+    }
+  }
+
+  .product-card__images::-webkit-scrollbar {
+    display: none;
+  }
+
+  .product-card__image {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    scroll-snap-align: start;
+  }
+
+  .product-card__badge {
+    align-self: flex-start;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .product-card__dots {
+    position: absolute;
+    left: var(--space-8);
+    bottom: var(--space-8);
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-8);
+  }
+
+  .product-card__dot {
+    width: 4px;
+    height: 4px;
+    padding: 0;
+    border: none;
+    background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    cursor: pointer;
+    transition: background-color 0.3s ease-out;
+  }
+
+  .product-card__dot.is-active {
+    background-color: var(--color-foreground);
+  }
+
+  /* Quick add "+": just the icon (same size as everywhere else, no
+     background), always shown, in the image's bottom-right corner
+     (6px from the side, like the badge). At least a 2rem tap
+     area. On desktop hover a label unfolds after the "+". */
+  .product-card__quick-add {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    min-width: 2rem;
+    min-height: 2rem;
+    /* 4px from the bottom, 6px from the right edge (like the badge) */
+    padding: var(--space-4) var(--space-6) var(--space-4) var(--space-4);
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-foreground);
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    /* No grey flash over the (invisible) tap area on mobile */
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .product-card__quick-add-inner {
+    display: flex;
+    align-items: baseline;
+  }
+
+  /* Hover label after the "+": opens to exactly its own width (a 0fr →
+     1fr grid column), the "+" easing left to make room, the text
+     fading in just behind it. */
+  .product-card__quick-add-label {
+    display: inline-grid;
+    grid-template-columns: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-columns 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.2s ease-out;
+  }
+
+  /* Clipped sideways only, so descenders (the "g") aren't cut off. The
+     gap to the "+" is part of the clipped content (not padding, which
+     wouldn't collapse and would keep the "+" 6px off the edge). */
+  .product-card__quick-add-label > span {
+    min-width: 0;
+    overflow-x: clip;
+    white-space: nowrap;
+  }
+
+  .product-card__quick-add-label > span::before {
+    content: '';
+    display: inline-block;
+    width: var(--space-6);
+  }
+
+  /* Just added: "✓ Hinzugefügt" (set by assets/product-card.js) */
+  /* Drawn like .icon-plus (same size, same thin straight stroke) */
+  .product-card__quick-add.is-added .icon-plus::before {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M0.8 5.2l2.9 2.9L9.2 2.2' fill='none' stroke='%23000' stroke-width='1.2'/%3E%3C/svg%3E");
+  }
+
+  /* With the label only on desktop; touch screens just get the ✓ */
+  @media (hover: hover) and (pointer: fine) {
+    .product-card__quick-add.is-added .product-card__quick-add-label {
+      grid-template-columns: 1fr;
+      opacity: 1;
+    }
+  }
+
+  /* While adding: no greying out, it goes straight to "✓ Hinzugefügt" */
+  .product-card__quick-add:disabled {
+    cursor: progress;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-card__quick-add:hover .product-card__quick-add-label,
+    .product-card__quick-add:focus-visible .product-card__quick-add-label {
+      grid-template-columns: 1fr;
+      opacity: 1;
+      transition:
+        grid-template-columns 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.35s ease-out 0.15s;
+    }
+  }
+
+  /* Notice after a quick add (theme setting "feedback"), created by
+     assets/product-card.js: the photo bleeding to the edge, next to it
+     "<TITLE> hinzugefügt" across the full width and the "▸ Warenkorb
+     ansehen" CTA below it, at the bottom of the photo. Slides up from
+     the bottom, centred, and away again by itself. */
+  .quick-add-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--page-margin) + env(safe-area-inset-bottom, 0px));
+    z-index: 20;
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-12);
+    /* Desktop: at least 24rem, growing with the text up to 32rem */
+    width: max-content;
+    min-width: min(24rem, calc(100vw - 2 * var(--page-margin)));
+    max-width: min(32rem, calc(100vw - 2 * var(--page-margin)));
+    padding-right: var(--space-16);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    translate: -50% calc(100% + var(--page-margin) + env(safe-area-inset-bottom, 0px));
+    transition: translate 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .quick-add-toast.is-visible {
+    translate: -50% 0;
+  }
+
+  .quick-add-toast--no-image {
+    padding-left: var(--space-16);
+  }
+
+  .quick-add-toast__image {
+    flex-shrink: 0;
+    display: block;
+    width: 64px;
+    height: 80px;
+    object-fit: cover;
+  }
+
+  .quick-add-toast__body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--space-12) 0;
+  }
+
+  .quick-add-toast__message {
+    margin: 0;
+  }
+
+  .quick-add-toast__title {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .quick-add-toast__view {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-foreground);
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .quick-add-toast__view:hover {
+      opacity: 0.7;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .quick-add-toast {
+      left: var(--page-margin);
+      right: var(--page-margin);
+      width: auto;
+      min-width: 0;
+      max-width: none;
+      translate: 0 calc(100% + var(--page-margin) + env(safe-area-inset-bottom, 0px));
+    }
+
+    .quick-add-toast.is-visible {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .quick-add-toast {
+      transition: none;
+    }
+  }
+
+
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-card__dot:not(.is-active):hover {
+      background-color: var(--color-foreground);
+    }
+  }
+
+  .product-card__info {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .product-card__title {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  /* Same raised treatment as .filter-count (snippets/collection-filter-drawer.liquid). */
+  .product-card__sold-out {
+    margin-left: var(--space-4);
+    font-size: 0.7em;
+    color: rgba(0, 0, 0, 0.4);
+    line-height: 0;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    vertical-align: 0.3em;
+    vertical-align: calc(1cap / 0.7 - 1cap);
+  }
+
+  .product-card__colors-wrap {
+    position: relative;
+    min-height: 1em;
+  }
+
+  .product-card__colors {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.4);
+    transition: opacity 0.2s ease;
+  }
+
+  .product-card__colors-name {
+    display: none;
+  }
+
+  @media (max-width: 749px) {
+    .product-card__colors-count {
+      display: none;
+    }
+
+    .product-card__colors-name {
+      display: inline;
+    }
+  }
+
+  .product-card__swatches {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  /* An image swatch (e.g. a wood grain) wins over the colour. */
+  .product-card__swatch-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    background-size: cover;
+    background-position: center;
+    scale: 0.75;
+    transition: scale 0.2s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .product-card:hover .product-card__colors {
+      opacity: 0;
+    }
+
+    .product-card:hover .product-card__swatches {
+      opacity: 1;
+    }
+
+    .product-card:hover .product-card__swatch-dot {
+      scale: 1;
+    }
+  }
+{% endstylesheet %}

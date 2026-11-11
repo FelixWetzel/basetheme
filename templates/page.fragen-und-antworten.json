@@ -1,0 +1,139 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "faq_VAHjyM": {
+      "type": "faq",
+      "blocks": {
+        "faq_topic_UNthab": {
+          "type": "faq-topic",
+          "settings": {
+            "heading": "Thema 1"
+          },
+          "blocks": {
+            "faq_question_XYweGC": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 1?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_dMM48g": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 2?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_bxJG6r": {
+              "type": "faq-question",
+              "name": "t:general.faq_question",
+              "settings": {
+                "question": "Frage 3?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "faq_question_XYweGC",
+            "faq_question_dMM48g",
+            "faq_question_bxJG6r"
+          ]
+        },
+        "faq_topic_hzjQ3a": {
+          "type": "faq-topic",
+          "name": "t:general.faq_topic",
+          "settings": {
+            "heading": "Thema 2"
+          },
+          "blocks": {
+            "faq_question_V9pMEN": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 4?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_CQ96aJ": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 5?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_3McVfY": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 6?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "faq_question_V9pMEN",
+            "faq_question_CQ96aJ",
+            "faq_question_3McVfY"
+          ]
+        },
+        "faq_topic_wwkXiX": {
+          "type": "faq-topic",
+          "name": "t:general.faq_topic",
+          "settings": {
+            "heading": "Thema 3"
+          },
+          "blocks": {
+            "faq_question_cWGhyb": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 7?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            },
+            "faq_question_fTG6LL": {
+              "type": "faq-question",
+              "settings": {
+                "question": "Frage 8?",
+                "answer": "<p>Antwort auf die Frage. Platzhaltertext, der später durch eigenen Inhalt ersetzt wird.</p>"
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "faq_question_cWGhyb",
+            "faq_question_fTG6LL"
+          ]
+        }
+      },
+      "block_order": [
+        "faq_topic_UNthab",
+        "faq_topic_hzjQ3a",
+        "faq_topic_wwkXiX"
+      ],
+      "name": "t:general.faq",
+      "settings": {
+        "submenu": "footer",
+        "headline": "Überschrift",
+        "text": ""
+      }
+    }
+  },
+  "order": [
+    "faq_VAHjyM"
+  ]
+}

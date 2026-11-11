@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+  <head>
+    {% # Inlined CSS Variables %}
+    {% render 'css-variables' %}
+
+    {% render 'font-preload' %}
+
+    {% # Load and preload the critical CSS %}
+    {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
+
+    {% render 'favicon' %}
+
+    {% comment %}
+      Tints the browser's own UI (e.g. Safari's top/bottom toolbar on
+      iOS) to match the page background instead of the browser's
+      default white/gray.
+    {% endcomment %}
+    <meta name="theme-color" content="{{ settings.background_color }}">
+
+    {% # Social, title, etc. %}
+    {% render 'meta-tags' %}
+
+    <script src="{{ 'product-card.js' | asset_url }}" defer></script>
+    <script src="{{ 'read-more.js' | asset_url }}" defer></script>
+
+    {{ content_for_header }}
+  </head>
+
+  <body>
+    {% # Logo intro: homepage only, unless the theme setting turns it on everywhere %}
+    {% if request.page_type == 'index' or settings.logo_intro_all_pages %}
+      {% render 'logo-intro' %}
+    {% endif %}
+
+    {% sections 'header-group' %}
+
+    <main class="main-content">
+      {% # The homepage has no visible headline (its banners are images), so it gets a hidden one for search engines and screen readers %}
+      {% if request.page_type == 'index' %}
+        <h1 class="visually-hidden">{{ shop.name }}</h1>
+      {% endif %}
+
+      {% liquid
+        assign is_policy_page = false
+        case request.path
+          when '/policies/privacy-policy', '/policies/refund-policy', '/policies/terms-of-service', '/policies/shipping-policy', '/policies/subscription-policy'
+            assign is_policy_page = true
+        endcase
+      %}
+
+      {% if is_policy_page %}
+        {% section 'policy-page' %}
+      {% elsif request.path contains 'subscribe' %}
+        {% render 'system-page', content: content_for_layout, heading: 'general.newsletter.page_heading' %}
+      {% else %}
+        {{ content_for_layout }}
+      {% endif %}
+    </main>
+
+    {% sections 'footer-group' %}
+
+    {% render 'newsletter-popup' %}
+
+    {% render 'screensaver' %}
+
+    {% if settings.scroll_reveal %}
+      {% render 'scroll-reveal' %}
+    {% endif %}
+
+    {% if settings.drawer_fade %}
+      {% render 'drawer-fade' %}
+    {% endif %}
+  </body>
+</html>

@@ -1,0 +1,743 @@
+{% doc %}
+  Filter & sort drawer for the collection page, opened by the "+ Filter"
+  button in the grid heading. Filters by label (the collection's
+  product tags — shown only here, never on the cards), colour (the
+  "Farbe"/"Color" product option, with its swatches) and material (the
+  product's custom.material metafield), sorts by the collection's own order or
+  price — all in the browser, on the cards' data-* attributes set in
+  sections/collection.liquid, so the collection's products must fit on
+  one page. Within a group options are OR'd, across groups AND'd. The
+  selection is mirrored into the URL (?merkmal=…&farbe=…&material=…&sortierung=…)
+  so a filtered view can be shared. Same slide-in/scrim treatment as
+  the cart drawer.
+
+  @param {collection} collection - The collection being filtered
+  @param {string} card_count - How many cards the collection shows
+  @param {string} [color_order] - Colour names joined by "|", in the order
+    picked in the collection section's "filter_color_order" setting
+
+  @example
+  {% render 'collection-filter-drawer', collection: collection, card_count: card_count %}
+{% enddoc %}
+
+{%- liquid
+  # Every colour and material in the collection, each once, in the
+  # order they first appear. Colours named in `color_order` (picked and
+  # dragged into order in the collection section's settings,
+  # case-insensitive) come first, in that order; the rest follow in
+  # first-appearance order.
+  assign seen_colors = '|'
+  assign seen_materials = '|'
+
+  # Each colour's rendered option, as "key<KEY>html" entries joined
+  # by <ITEM>, so they can be reordered below.
+  capture color_entries
+    for product in collection.products
+      assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+      unless color_option
+        assign color_option = product.options_with_values | where: 'name', 'Color' | first
+      endunless
+      for value in color_option.values
+        assign marker = '|' | append: value.name | append: '|'
+        if seen_colors contains marker
+          continue
+        endif
+        assign seen_colors = seen_colors | append: value.name | append: '|'
+        echo '<ITEM>'
+        echo value.name | downcase | strip
+        echo '<KEY>'
+        render 'collection-filter-option', group: 'farbe', label: value.name, swatch: value.swatch
+      endfor
+    endfor
+  endcapture
+
+  assign color_items = color_entries | split: '<ITEM>'
+  assign color_order = color_order | split: '|'
+  assign used_colors = '<ITEM>'
+
+  capture color_options
+    for wanted in color_order
+      assign wanted_key = wanted | strip | downcase
+      if wanted_key == blank
+        continue
+      endif
+      for item in color_items
+        assign item_parts = item | split: '<KEY>'
+        if item_parts[0] == wanted_key
+          assign used_marker = '<ITEM>' | append: wanted_key | append: '<ITEM>'
+          unless used_colors contains used_marker
+            assign used_colors = used_colors | append: wanted_key | append: '<ITEM>'
+            echo item_parts[1]
+          endunless
+          break
+        endif
+      endfor
+    endfor
+
+    for item in color_items
+      assign item_parts = item | split: '<KEY>'
+      if item_parts[1] == blank
+        continue
+      endif
+      assign used_marker = '<ITEM>' | append: item_parts[0] | append: '<ITEM>'
+      unless used_colors contains used_marker
+        echo item_parts[1]
+      endunless
+    endfor
+  endcapture
+
+  capture material_options
+    for product in collection.products
+      assign material_field = product.metafields.custom.material
+      if material_field.type contains 'list'
+        assign product_materials = material_field.value
+      elsif material_field.value != blank
+        assign product_materials = material_field.value | split: '|||'
+      else
+        continue
+      endif
+      for material in product_materials
+        assign marker = '|' | append: material | append: '|'
+        if seen_materials contains marker
+          continue
+        endif
+        assign seen_materials = seen_materials | append: material | append: '|'
+        render 'collection-filter-option', group: 'material', label: material
+      endfor
+    endfor
+  endcapture
+-%}
+
+<dialog
+  id="collection-filter"
+  class="filter-drawer"
+  scroll-lock
+  closedby="any"
+  aria-label="{{ 'collections.filter.title' | t }}"
+>
+  <form class="filter-drawer__form" data-filter-form>
+    <div class="filter-drawer__bar">
+      <p class="filter-drawer__title">{{ 'collections.filter.title' | t }}</p>
+      <button type="button" class="filter-drawer__close" data-filter-close>
+        {{ 'general.header.close' | t }}
+      </button>
+    </div>
+
+    <div class="filter-drawer__groups" data-drawer-fade>
+      <details class="filter-group" open>
+        <summary class="filter-group__summary">
+          <span>{{ 'collections.filter.sort' | t }}</span>
+          <span class="filter-group__icon icon-plus" aria-hidden="true"></span>
+        </summary>
+        <div class="filter-group__options">
+          <label class="filter-option">
+            <input class="visually-hidden" type="radio" name="sortierung" value="" checked>
+            <span class="filter-option__label">{{ 'collections.filter.featured' | t }}</span>
+          </label>
+          <label class="filter-option">
+            <input class="visually-hidden" type="radio" name="sortierung" value="preis-aufsteigend">
+            <span class="filter-option__label">{{ 'collections.filter.price_ascending' | t }}</span>
+          </label>
+          <label class="filter-option">
+            <input class="visually-hidden" type="radio" name="sortierung" value="preis-absteigend">
+            <span class="filter-option__label">{{ 'collections.filter.price_descending' | t }}</span>
+          </label>
+        </div>
+      </details>
+
+      {% if collection.all_tags != empty %}
+        <details class="filter-group" open>
+          <summary class="filter-group__summary">
+            <span>
+              {{- 'collections.filter.labels' | t -}}
+              <sup class="filter-count" data-filter-group-count="merkmal" hidden></sup>
+            </span>
+            <span class="filter-group__icon icon-plus" aria-hidden="true"></span>
+          </summary>
+          <div class="filter-group__options">
+            {% for tag in collection.all_tags %}
+              {% render 'collection-filter-option', group: 'merkmal', label: tag %}
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
+
+      {% if color_options != blank %}
+        <details class="filter-group" open>
+          <summary class="filter-group__summary">
+            <span>
+              {{- 'collections.filter.color' | t -}}
+              <sup class="filter-count" data-filter-group-count="farbe" hidden></sup>
+            </span>
+            <span class="filter-group__icon icon-plus" aria-hidden="true"></span>
+          </summary>
+          <div class="filter-group__options">
+            {{ color_options }}
+          </div>
+        </details>
+      {% endif %}
+
+      {% if material_options != blank %}
+        <details class="filter-group" open>
+          <summary class="filter-group__summary">
+            <span>
+              {{- 'collections.filter.material' | t -}}
+              <sup class="filter-count" data-filter-group-count="material" hidden></sup>
+            </span>
+            <span class="filter-group__icon icon-plus" aria-hidden="true"></span>
+          </summary>
+          <div class="filter-group__options">
+            {{ material_options }}
+          </div>
+        </details>
+      {% endif %}
+    </div>
+
+    <div class="filter-drawer__footer" data-drawer-fade style="--fade-index: 2;">
+      <button type="button" class="filter-drawer__reset" data-filter-reset>
+        {{ 'collections.filter.reset' | t }}
+      </button>
+      {% comment %} The JS swaps __COUNT__ for the live number of matching cards. {% endcomment %}
+      <button
+        type="submit"
+        class="filter-drawer__submit"
+        data-filter-submit
+        data-template="{{ 'collections.filter.show' | t: count: '__COUNT__' | escape }}"
+      >
+        {{ 'collections.filter.show' | t: count: card_count }}
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{% stylesheet %}
+  /* Shell, slide-in and scrim: same as the cart drawer
+     (snippets/cart-drawer.liquid), which documents why each rule is
+     there. */
+  .filter-drawer {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: 100%;
+    max-width: 27.5rem;
+    height: 100%;
+    max-height: 100%;
+    border: none;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--color-drawer-background);
+    color: var(--color-foreground);
+    translate: 100% 0;
+  }
+
+  @media (max-width: 749px) {
+    .filter-drawer {
+      width: 85%;
+      max-width: none;
+    }
+  }
+
+  .filter-drawer[open] {
+    display: flex;
+    translate: 0 0;
+    transition:
+      translate 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  @starting-style {
+    .filter-drawer[open] {
+      translate: 100% 0;
+    }
+  }
+
+  .filter-drawer.is-closing {
+    translate: 100% 0;
+    transition: translate 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .filter-drawer::backdrop {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+    opacity: 0;
+    transition:
+      opacity 0.8s cubic-bezier(0.65, 0, 0.35, 1),
+      display 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete,
+      overlay 0.8s cubic-bezier(0.65, 0, 0.35, 1) allow-discrete;
+  }
+
+  .filter-drawer[open]::backdrop {
+    opacity: 1;
+    transition:
+      opacity 0.35s ease,
+      display 0.35s ease allow-discrete,
+      overlay 0.35s ease allow-discrete;
+  }
+
+  @starting-style {
+    .filter-drawer[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .filter-drawer.is-closing::backdrop {
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .filter-drawer__form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .filter-drawer__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-16) var(--page-margin);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .filter-drawer__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .filter-drawer__close {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    color: var(--color-foreground);
+    outline: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .filter-drawer__close:focus-visible {
+    outline: none;
+  }
+
+  .filter-drawer__groups {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 var(--page-margin);
+  }
+
+  /* Same look as the product page accordion. */
+  .filter-group + .filter-group {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .filter-group__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-16) 0;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .filter-group__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filter-group[open] .filter-group__icon::before {
+    content: '−';
+    width: auto;
+    height: auto;
+    vertical-align: baseline;
+    background: none;
+    mask: none;
+  }
+
+  .filter-group__options {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-8);
+    padding-bottom: var(--space-16);
+  }
+
+  /* A square bullet marks the selected options — same convention as
+     the collection submenu and the header menu. */
+  .filter-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    cursor: pointer;
+  }
+
+  .filter-option::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .filter-option:has(input:checked) {
+    gap: var(--space-6);
+  }
+
+  .filter-option:has(input:checked)::before {
+    width: 4px;
+  }
+
+  .filter-option:has(input:focus-visible) .filter-option__label {
+    outline: 1px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .filter-option.is-disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .filter-option:not(.is-disabled):hover,
+    .filter-drawer__close:hover,
+    .filter-drawer__reset:hover {
+      opacity: 0.7;
+    }
+  }
+
+  /* Colour options: no bullet — the swatch itself gets the black
+     frame instead, like the swatches on the product page, but larger
+     (40px box, 2px gap, 1px border). */
+  .filter-option--swatch::before {
+    display: none;
+  }
+
+  .filter-option--swatch,
+  .filter-option--swatch:has(input:checked) {
+    gap: var(--space-6);
+  }
+
+  .filter-option__swatch {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    padding: 2px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+    background-origin: content-box;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .filter-option--swatch:has(input:checked) .filter-option__swatch {
+    border-color: var(--color-foreground);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .filter-option--swatch:not(.is-disabled):hover {
+      opacity: 1;
+    }
+
+    .filter-option--swatch:not(.is-disabled):hover .filter-option__swatch {
+      border-color: var(--color-foreground);
+    }
+  }
+
+  /* Same superscript as the product counts in the grid heading, but
+     spaced to match how the counts in the (versal) menu read. */
+  .filter-count {
+    margin-left: var(--space-4);
+    font-size: 0.7em;
+    line-height: 0;
+    letter-spacing: 0.05em;
+    vertical-align: 0.3em;
+    vertical-align: calc(1cap / 0.7 - 1cap);
+  }
+
+  /* Reset stacked above the submit button, both full width. */
+  .filter-drawer__footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding: var(--space-16);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  /* Plain text link above the black submit button. */
+  .filter-drawer__reset {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+    color: var(--color-foreground);
+    text-decoration: none;
+    transition: opacity 0.3s ease-out;
+  }
+
+  /* Same as the cart drawer's checkout button. */
+  .filter-drawer__submit {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: var(--space-16);
+    border: none;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .filter-drawer__submit:hover {
+      opacity: 0.8;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const drawer = document.getElementById('collection-filter');
+    const grid = document.querySelector('[data-filter-grid]');
+    if (!drawer || !grid) return;
+
+    const form = drawer.querySelector('[data-filter-form]');
+    const items = [...grid.querySelectorAll('[data-filter-item]')];
+    const stories = [...grid.querySelectorAll('[data-filter-story]')];
+    const originalOrder = [...grid.children];
+    const emptyMessage = document.querySelector('[data-filter-empty]');
+    const cardCount = document.querySelector('[data-filter-card-count]');
+    const submit = form.querySelector('[data-filter-submit]');
+    const groups = ['merkmal', 'farbe', 'material'];
+
+    const split = (value) => (value ? value.split('|') : []);
+    const data = new Map(
+      items.map((item) => [
+        item,
+        {
+          merkmal: split(item.dataset.labels),
+          farbe: split(item.dataset.colors),
+          material: split(item.dataset.materials),
+          price: Number(item.dataset.price),
+          index: Number(item.dataset.index),
+        },
+      ])
+    );
+
+    const selection = () => {
+      const selected = {};
+      groups.forEach((group) => {
+        selected[group] = [...form.querySelectorAll(`input[name="${group}"]:checked`)].map((input) => input.value);
+      });
+      return selected;
+    };
+
+    // Matches every group except `skip` — so an option's count shows
+    // how many cards it would give on top of the other groups' choices.
+    const matches = (item, selected, skip) =>
+      groups.every(
+        (group) =>
+          group === skip ||
+          selected[group].length === 0 ||
+          selected[group].some((value) => data.get(item)[group].includes(value))
+      );
+
+    const apply = () => {
+      const selected = selection();
+      const sort = form.querySelector('input[name="sortierung"]:checked')?.value || '';
+      const visible = items.filter((item) => matches(item, selected));
+      const filtered = groups.some((group) => selected[group].length > 0);
+
+      items.forEach((item) => {
+        item.hidden = !visible.includes(item);
+      });
+      // Stories only belong between the curated, unfiltered cards.
+      stories.forEach((story) => {
+        story.hidden = filtered || sort !== '';
+      });
+
+      if (sort) {
+        const direction = sort === 'preis-absteigend' ? -1 : 1;
+        const sorted = [...items].sort(
+          (a, b) => direction * (data.get(a).price - data.get(b).price) || data.get(a).index - data.get(b).index
+        );
+        grid.append(...sorted, ...stories);
+      } else {
+        grid.append(...originalOrder);
+      }
+
+      form.querySelectorAll('[data-filter-option]').forEach((input) => {
+        const group = input.name;
+        const count = items.filter(
+          (item) => matches(item, selected, group) && data.get(item)[group].includes(input.value)
+        ).length;
+        const label = input.closest('.filter-option');
+        label.querySelector('[data-filter-option-count]').textContent = count;
+        input.disabled = count === 0 && !input.checked;
+        label.classList.toggle('is-disabled', input.disabled);
+      });
+
+      groups.forEach((group) => {
+        const count = form.querySelector(`[data-filter-group-count="${group}"]`);
+        if (!count) return;
+        count.textContent = selected[group].length;
+        count.hidden = selected[group].length === 0;
+      });
+
+      if (cardCount) {
+        const template = visible.length === 1 ? cardCount.dataset.templateOne : cardCount.dataset.templateOther;
+        cardCount.textContent = template.replace('__COUNT__', visible.length);
+      }
+      if (emptyMessage) emptyMessage.hidden = visible.length > 0;
+      submit.textContent = submit.dataset.template.replace('__COUNT__', visible.length);
+
+      const params = new URLSearchParams(window.location.search);
+      [...groups, 'sortierung'].forEach((name) => params.delete(name));
+      groups.forEach((group) => selected[group].forEach((value) => params.append(group, value)));
+      if (sort) params.set('sortierung', sort);
+      const query = params.toString();
+      window.history.replaceState(null, '', query ? `${window.location.pathname}?${query}` : window.location.pathname);
+    };
+
+    // Restore a shared/bookmarked selection from the URL.
+    const initial = new URLSearchParams(window.location.search);
+    form.querySelectorAll('[data-filter-option]').forEach((input) => {
+      input.checked = initial.getAll(input.name).includes(input.value);
+    });
+    const initialSort = form.querySelector(`input[name="sortierung"][value="${CSS.escape(initial.get('sortierung') || '')}"]`);
+    if (initialSort) initialSort.checked = true;
+    apply();
+
+    form.addEventListener('change', apply);
+
+    form.querySelector('[data-filter-reset]').addEventListener('click', () => {
+      form.querySelectorAll('[data-filter-option]').forEach((input) => {
+        input.checked = false;
+      });
+      form.querySelector('input[name="sortierung"][value=""]').checked = true;
+      apply();
+    });
+
+    // Same animated close as the cart drawer: slide out first, then
+    // really close once the transition is done.
+    const closeDrawerAnimated = () => {
+      if (drawer.classList.contains('is-closing')) return;
+      drawer.classList.add('is-closing');
+    };
+
+    drawer.addEventListener('transitionend', (event) => {
+      if (
+        event.target === drawer &&
+        event.propertyName === 'translate' &&
+        !event.pseudoElement &&
+        drawer.classList.contains('is-closing')
+      ) {
+        drawer.classList.remove('is-closing');
+        drawer.close();
+      }
+    });
+
+    drawer.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeDrawerAnimated();
+    });
+
+    drawer.addEventListener('click', (event) => {
+      if (event.target === drawer || event.target.closest('[data-filter-close]')) closeDrawerAnimated();
+    });
+
+    // The grid already updates live; "Produkte anzeigen" just closes.
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      closeDrawerAnimated();
+    });
+
+    document.querySelectorAll('[data-filter-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (drawer.classList.contains('is-closing')) {
+          drawer.classList.remove('is-closing');
+          if (drawer.open) drawer.close();
+        }
+        drawer.showModal();
+      });
+    });
+
+    // Animated open/close for the groups — same height Web Animation
+    // as the product page accordion (sections/product.liquid), the
+    // real `open` attribute only set once it finishes. The end heights
+    // add the group's top border, which the summary and options don't
+    // include.
+    drawer.querySelectorAll('.filter-group').forEach((details) => {
+      const summary = details.querySelector('.filter-group__summary');
+      const content = details.querySelector('.filter-group__options');
+      if (!summary || !content) return;
+
+      let animation = null;
+      let isClosing = false;
+      let isExpanding = false;
+
+      const border = () => details.offsetHeight - details.clientHeight;
+
+      const onFinish = (open) => {
+        details.open = open;
+        animation = null;
+        isClosing = false;
+        isExpanding = false;
+        details.style.height = details.style.overflow = '';
+      };
+
+      const expand = () => {
+        isExpanding = true;
+        const startHeight = `${details.offsetHeight}px`;
+        const endHeight = `${border() + summary.offsetHeight + content.offsetHeight}px`;
+        animation?.cancel();
+        animation = details.animate({ height: [startHeight, endHeight] }, { duration: 250, easing: 'ease' });
+        animation.onfinish = () => onFinish(true);
+        animation.oncancel = () => (isExpanding = false);
+      };
+
+      const close = () => {
+        if (!details.open) return;
+        isClosing = true;
+        const startHeight = `${details.offsetHeight}px`;
+        const endHeight = `${border() + summary.offsetHeight}px`;
+        details.style.overflow = 'hidden';
+        animation?.cancel();
+        animation = details.animate({ height: [startHeight, endHeight] }, { duration: 250, easing: 'ease' });
+        animation.onfinish = () => onFinish(false);
+        animation.oncancel = () => (isClosing = false);
+      };
+
+      const open = () => {
+        details.style.overflow = 'hidden';
+        details.style.height = `${details.offsetHeight}px`;
+        details.open = true;
+        window.requestAnimationFrame(expand);
+      };
+
+      summary.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (isClosing || !details.open) {
+          open();
+        } else if (isExpanding || details.open) {
+          close();
+        }
+      });
+    });
+  })();
+{% endjavascript %}

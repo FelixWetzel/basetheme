@@ -1,0 +1,241 @@
+<div
+  class="announcement-bar announcement-bar--{{ section.settings.text_color }}{% if section.settings.uppercase %} announcement-bar--uppercase{% endif %} full-width"
+  style="background-color: {{ section.settings.background_color | default: 'var(--color-foreground)' }};"
+  data-announcement-speed="{{ section.settings.speed | default: 4 }}"
+>
+  <div class="announcement-bar__track">
+    <div class="announcement-bar__reel">
+      {% content_for 'blocks' %}
+    </div>
+  </div>
+
+  {% if section.blocks.size > 1 %}
+    <div class="announcement-bar__dots" role="tablist" aria-label="{{ 'general.announcement_bar.slides' | t }}">
+      {% for block in section.blocks %}
+        <button
+          type="button"
+          class="announcement-bar__dot{% if forloop.first %} is-active{% endif %}"
+          aria-label="{{ 'general.announcement_bar.slide' | t: index: forloop.index }}"
+        ></button>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .announcement-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+    padding: var(--space-16) var(--page-margin);
+    /* Same grey hairline as the header's bottom border. Drawn as an
+       inset shadow so the bar keeps its exact height (the header is
+       sized to match it), and mixed against the page background so
+       it stays the same opaque grey on the dark bar colour. */
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-foreground) 10%, var(--color-background));
+  }
+
+  .announcement-bar__track {
+    flex: 1 1 auto;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+    height: 1rem;
+    text-align: left;
+  }
+
+  /* Slot-machine reel: every announcement is stacked vertically in
+     normal flow and the whole reel shifts up by one row at a time
+     (--index, set from JS) — same technique as the header logo's
+     wordmark/signet swap. */
+  .announcement-bar__reel {
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.6s ease;
+    transform: translateY(calc(var(--index, 0) * -1rem));
+  }
+
+  .announcement-bar__reel > .shopify-block {
+    height: 1rem;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .announcement-bar--light {
+    color: var(--color-background);
+  }
+
+  .announcement-bar--dark {
+    color: var(--color-foreground);
+  }
+
+  /* Every announcement stays on one line — the reel rows are exactly
+     one line tall, so wrapped text would spill into the next one.
+     Text that still doesn't fit is cut with an ellipsis; the CTA
+     never shrinks. */
+  .announcement-bar__item,
+  .announcement-bar__item a {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .announcement-bar__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .announcement-bar__text--mobile {
+    display: none;
+  }
+
+  @media (max-width: 749px) {
+    .announcement-bar__text--desktop {
+      display: none;
+    }
+
+    .announcement-bar__text--mobile {
+      display: block;
+    }
+  }
+
+  .announcement-bar--uppercase .announcement-bar__item {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .announcement-bar__item a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Call to action, right after the announcement text. */
+  .announcement-bar__cta {
+    flex-shrink: 0;
+    margin-left: var(--space-12);
+  }
+
+  .announcement-bar__dots {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    flex-shrink: 0;
+  }
+
+  .announcement-bar__dot {
+    width: 4px;
+    height: 4px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+  }
+
+  .announcement-bar--light .announcement-bar__dot {
+    background-color: color-mix(in srgb, var(--color-background) 30%, transparent);
+  }
+
+  .announcement-bar--light .announcement-bar__dot.is-active {
+    background-color: var(--color-background);
+  }
+
+  .announcement-bar--dark .announcement-bar__dot {
+    background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+  }
+
+  .announcement-bar--dark .announcement-bar__dot.is-active {
+    background-color: var(--color-foreground);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const bar = document.querySelector('.announcement-bar');
+    const reel = document.querySelector('.announcement-bar__reel');
+    if (!reel) return;
+
+    const items = reel.querySelectorAll(':scope > .shopify-block');
+    if (items.length === 0) return;
+
+    const dots = document.querySelectorAll('.announcement-bar__dot');
+
+    const intervalMs = (Number(bar?.dataset.announcementSpeed) || 4) * 1000;
+
+    let index = 0;
+    dots[0]?.classList.add('is-active');
+
+    if (items.length < 2) return;
+
+    const goTo = (nextIndex) => {
+      dots[index]?.classList.remove('is-active');
+      index = nextIndex;
+      reel.style.setProperty('--index', index);
+      dots[index]?.classList.add('is-active');
+    };
+
+    let timer = setInterval(() => goTo((index + 1) % items.length), intervalMs);
+
+    dots.forEach((dot, dotIndex) => {
+      dot.addEventListener('click', () => {
+        clearInterval(timer);
+        goTo(dotIndex);
+        timer = setInterval(() => goTo((index + 1) % items.length), intervalMs);
+      });
+    });
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.announcement_bar",
+  "settings": [
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "t:labels.background",
+      "info": "t:labels.announcement_background_info"
+    },
+    {
+      "type": "select",
+      "id": "text_color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "checkbox",
+      "id": "uppercase",
+      "label": "t:labels.uppercase",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "t:labels.announcement_speed",
+      "info": "t:labels.announcement_speed_info",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 4
+    }
+  ],
+  "blocks": [{ "type": "announcement" }],
+  "presets": [
+    {
+      "name": "t:general.announcement_bar",
+      "blocks": [{ "type": "announcement" }]
+    }
+  ],
+  "enabled_on": {
+    "groups": ["header"]
+  }
+}
+{% endschema %}

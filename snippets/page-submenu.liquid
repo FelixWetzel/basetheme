@@ -1,0 +1,101 @@
+{% doc %}
+  Renders a page's submenu: a single-row, swipeable/scrollable row of
+  links, the link matching the current page highlighted. Always one
+  line (never wraps) so the headline beside/below it sits at the same
+  height across every page that uses this, regardless of how many
+  links a given menu has. Used at the top of pages like FAQ, Händler,
+  or a simple text page.
+
+  @param {object} menu - The navigation menu (link list) to render as the submenu.
+
+  @example
+  {% render 'page-submenu', menu: section.settings.submenu %}
+{% enddoc %}
+
+<nav class="page-submenu" data-sticky-submenu aria-label="{{ 'general.page_submenu' | t }}">
+  {% for link in menu.links %}
+    <a
+      href="{{ link.url }}"
+      class="page-submenu__link{% if link.url == request.path %} is-active{% endif %}"
+    >
+      {{ link.title }}
+    </a>
+  {% endfor %}
+</nav>
+
+{% stylesheet %}
+  .page-submenu {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-12);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    padding-bottom: var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .page-submenu::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* A square bullet marks the current page — same convention as the
+     header-menu/footer-column/collection-nav links. */
+  .page-submenu__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .page-submenu__link.is-active {
+    gap: var(--space-6);
+  }
+
+  .page-submenu__link::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  .page-submenu__link.is-active::before {
+    width: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .page-submenu__link:hover {
+      opacity: 0.7;
+    }
+  }
+
+  /* Bleed past the page-margin padding of whatever wraps this
+     (faq-header, dealers-header, etc.) so the scrollable row is
+     clipped by the actual viewport edge, not the margin line — the
+     margin re-appears as this element's own padding instead, so the
+     first item still starts in the right place. Applies at every
+     width now that this never wraps to a second row. */
+  .page-submenu {
+    margin-left: calc(-1 * var(--page-margin));
+    margin-right: calc(-1 * var(--page-margin));
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  // The active link can otherwise sit clipped at the edge of the
+  // scrollable row (e.g. the last item in the list) — bring it fully
+  // into view on load.
+  document.querySelectorAll('.page-submenu').forEach((nav) => {
+    const active = nav.querySelector('.page-submenu__link.is-active');
+    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+  });
+{% endjavascript %}

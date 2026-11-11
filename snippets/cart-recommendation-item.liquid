@@ -1,0 +1,91 @@
+{% doc %}
+  One product in the cart drawer's "Passt dazu" carousel
+  (snippets/cart-recommendations.liquid), laid out like the cart's own
+  line items (reusing the .cart-drawer__item classes): thumbnail,
+  title, price top right and a "+ In den Warenkorb" button where a
+  line item has its quantity stepper.
+
+  Shows and adds the variant in the given colour (option "Farbe" or
+  "Color" with exactly that value) when the product has it available —
+  so a grey shelf in the cart gets the grey paint pen — otherwise its
+  first available variant. A given `variant` (hand-picked in
+  custom.recommended_variants) is shown as is, ignoring `color`.
+
+  @param {product} product - The product to show
+  @param {string} [color] - Colour of the cart item that recommended it
+  @param {variant} [variant] - A fixed variant to show instead
+
+  @example
+  {% render 'cart-recommendation-item', product: recommended_product, color: source_color %}
+  {% render 'cart-recommendation-item', product: recommended_variant.product, variant: recommended_variant %}
+{% enddoc %}
+
+{% liquid
+  assign shown_variant = product.selected_or_first_available_variant
+  if variant
+    assign shown_variant = variant
+  elsif color != blank
+    for option in product.options_with_values
+      if option.name == 'Farbe' or option.name == 'Color'
+        assign color_position = forloop.index0
+        for candidate in product.variants
+          if candidate.available and candidate.options[color_position] == color
+            assign shown_variant = candidate
+            break
+          endif
+        endfor
+      endif
+    endfor
+  endif
+
+  # Same lookup as the cart's own line items: `.value.first` doesn't
+  # resolve on a file list metafield, so take the first file in a loop.
+  assign shown_image = null
+  for file in shown_variant.metafields.custom.gallery.value
+    assign shown_image = file.preview_image
+    break
+  endfor
+  unless shown_image
+    assign shown_image = shown_variant.featured_image | default: product.featured_media.preview_image
+  endunless
+
+  assign shown_url = product.url | append: '?variant=' | append: shown_variant.id
+%}
+
+<div class="cart-drawer__item">
+  <a href="{{ shown_url }}" class="cart-drawer__item-thumbnail">
+    {% if shown_image %}
+      <img
+        src="{{ shown_image | image_url: width: 200 }}"
+        srcset="
+          {{ shown_image | image_url: width: 200 }} 1x,
+          {{ shown_image | image_url: width: 400 }} 2x
+        "
+        alt="{{ shown_image.alt | default: product.title | escape }}"
+        loading="lazy"
+        width="{{ shown_image.width }}"
+        height="{{ shown_image.height }}"
+      >
+    {% endif %}
+  </a>
+
+  <div class="cart-drawer__item-details">
+    <a href="{{ shown_url }}" class="cart-drawer__item-info cart-recommendations__link">
+      <p class="cart-drawer__item-title">{{ product.title }}</p>
+      {% if shown_variant.title != 'Default Title' %}
+        <p class="cart-drawer__item-variant">{{ shown_variant.title }}</p>
+      {% endif %}
+    </a>
+    <button
+      type="button"
+      class="cart-recommendations__add"
+      data-cart-add
+      data-variant-id="{{ shown_variant.id }}"
+    >
+      <span class="icon-plus" aria-hidden="true"></span>
+      {{ 'products.add_to_cart' | t }}
+    </button>
+  </div>
+
+  <p class="cart-drawer__item-price">{{ shown_variant.price | divided_by: 100 }} €</p>
+</div>

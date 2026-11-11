@@ -1,0 +1,366 @@
+<a
+  {% if section.settings.link != blank %}
+    href="{{ section.settings.link }}"
+  {% endif %}
+  class="hero-banner hero-banner--{{ section.settings.text_color }} full-width"
+>
+  <div
+    class="hero-banner__media{% if section.settings.background_type == 'color' %} hero-banner__media--color{% endif %}"
+    {% if section.settings.background_type == 'color' %}
+      style="background-color: {{ section.settings.background_color }};"
+    {% elsif section.settings.image_darken > 0 %}
+      style="--image-darken: {{ section.settings.image_darken | divided_by: 100.0 }};"
+    {% endif %}
+  >
+    {% if section.settings.background_type == 'color' %}
+      {% comment %} Plain colour field, no image or video {% endcomment %}
+    {% elsif section.settings.video != blank %}
+      {{
+        section.settings.video
+        | video_tag:
+          image_size: '1600x',
+          autoplay: true,
+          loop: true,
+          muted: true,
+          controls: false,
+          playsinline: true,
+          width: section.settings.video.width,
+          height: section.settings.video.height
+      }}
+    {% else %}
+      <picture>
+        {% if section.settings.image_mobile != blank %}
+          <source
+            media="(max-width: 749px)"
+            srcset="
+              {{ section.settings.image_mobile | image_url: width: 750 }} 1x,
+              {{ section.settings.image_mobile | image_url: width: 1500 }} 2x
+            "
+          >
+        {% endif %}
+        {% if section.settings.image != blank %}
+          <img
+            src="{{ section.settings.image | image_url: width: 1600 }}"
+            srcset="
+              {{ section.settings.image | image_url: width: 1600 }} 1x,
+              {{ section.settings.image | image_url: width: 3200 }} 2x
+            "
+            alt="{{ section.settings.image.alt | default: section.settings.image_mobile.alt | escape }}"
+            loading="eager"
+            width="{{ section.settings.image.width }}"
+            height="{{ section.settings.image.height }}"
+          >
+        {% endif %}
+      </picture>
+    {% endif %}
+  </div>
+
+  {% if section.settings.show_logo and settings.logo_signet != blank %}
+    <div class="hero-banner__logo" aria-hidden="true">
+      {% render 'logo', type: 'signet', fallback: 'none' %}
+    </div>
+  {% endif %}
+
+  <div class="hero-banner__content">
+    <div class="hero-banner__text">
+      <p class="hero-banner__headline">{{ section.settings.headline }}</p>
+
+      {% if section.settings.subtitle != blank %}
+        <p class="hero-banner__subtitle">{{ section.settings.subtitle }}</p>
+      {% endif %}
+    </div>
+
+    {% if section.settings.cta_text != blank %}
+      <p class="hero-banner__cta cta">{{ section.settings.cta_text }}</p>
+    {% endif %}
+  </div>
+</a>
+
+{% stylesheet %}
+  .hero-banner {
+    /* Image and text are one unit — the text is always anchored to
+       the top of its own image, moving with it as you scroll — no
+       gap, no hold buffer, no detaching. The next banner (0 gap)
+       starts filling the screen the moment this one scrolls past. */
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    isolation: isolate;
+    height: 90svh;
+    min-height: 36rem;
+    text-decoration: none;
+  }
+
+  .hero-banner__media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90svh;
+    min-height: 36rem;
+    z-index: -1;
+    display: block;
+    overflow: hidden;
+    /* Named view-timeline so the image can be linked to this
+       banner's own scroll progress through the viewport. */
+    view-timeline-name: --hero-banner-view;
+    view-timeline-axis: block;
+  }
+
+  /* Optional black veil over the image/video, for light text on a
+     bright image. */
+  .hero-banner__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / var(--image-darken, 0));
+    pointer-events: none;
+  }
+
+  /* Colour instead of image: no darkening veil on top of it */
+  .hero-banner__media--color::after {
+    content: none;
+  }
+
+  .hero-banner__media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-banner__media img,
+  .hero-banner__media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Subtle parallax: the image drifts slightly as its own banner
+       scrolls through the viewport. */
+    animation: hero-banner-parallax linear both;
+    animation-timeline: --hero-banner-view;
+    animation-range: cover 0% cover 100%;
+  }
+
+  /* 1.08 is just enough headroom for the ±3.5% drift (3.5% × 1.08
+     < the 4% overhang per edge), keeping as much of the image
+     visible as possible — mobile hero images are cut to exactly the
+     banner's 4:5 frame, so every extra % of scale crops the sides. */
+  @keyframes hero-banner-parallax {
+    from {
+      transform: scale(1.08) translateY(-3.5%);
+    }
+    to {
+      transform: scale(1.08) translateY(3.5%);
+    }
+  }
+
+  .hero-banner__content {
+    /* Same 4-column grid as the footer (equal columns, 4px gap), so
+       headline/CTA line up with the rest of the site's grid instead
+       of floating independently. Full banner height, so that the
+       text and CTA below can each stick on their own (see there). */
+    align-self: stretch;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: flex-start;
+    gap: var(--space-4);
+    width: 100%;
+    padding: var(--space-16) var(--page-margin);
+  }
+
+  /* Text and CTA stick separately rather than as one row: as the
+     banner scrolls out, each is pushed up only once its own bottom
+     reaches the banner's — so a one-line CTA rides all the way down
+     instead of leaving early with a taller headline + subtitle. */
+  .hero-banner__text,
+  .hero-banner__cta {
+    position: sticky;
+    top: calc(var(--sticky-offset, var(--header-height, 3.5rem)) + var(--space-16));
+  }
+
+  .hero-banner__text {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .hero-banner__headline,
+  .hero-banner__subtitle {
+    margin: 0;
+  }
+
+  .hero-banner__headline {
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .hero-banner__cta {
+    grid-column: 3;
+    margin: 0;
+    text-align: left;
+  }
+
+  @media (min-width: 750px) {
+    /* Desktop: starts on the same edge as the text in the right half of
+       a two-up hero banner (the middle of the page plus the page
+       margin) instead of the plain grid column (middle + 2px) — the
+       third column starts at middle + half the 4px gap. */
+    .hero-banner__cta {
+      margin-left: calc(var(--page-margin) - var(--space-4) / 2);
+    }
+  }
+
+  /* Centred over the image (not the sticky text row), so it stays
+     put while the image drifts underneath. Takes the banner's text
+     colour. */
+  .hero-banner__logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  /* Signet height: --signet-scale (Theme-Einstellungen → Logo) of the
+     content width on desktop, 120% of that on mobile. The width
+     follows from the signet's aspect ratio. */
+  .hero-banner__logo .theme-logo {
+    display: block;
+    width: auto;
+    height: calc((100vw - 2 * var(--page-margin)) * var(--signet-scale));
+  }
+
+  @media (max-width: 749px) {
+    .hero-banner__logo .theme-logo {
+      height: calc((100vw - 2 * var(--page-margin)) * var(--signet-scale) * 1.2);
+    }
+  }
+
+  .hero-banner--light {
+    color: var(--color-background);
+  }
+
+  .hero-banner--dark {
+    color: var(--color-foreground);
+  }
+
+  /* Mobile: CTA sits right-aligned in the last column instead of
+     left-aligned in the third, and the headline/subtitle text spans
+     three columns instead of one — otherwise the subtitle wraps
+     awkwardly tight against the two empty columns between it and the
+     CTA. */
+  @media (max-width: 749px) {
+    .hero-banner__text {
+      grid-column: 1 / 4;
+    }
+
+    .hero-banner__cta {
+      grid-column: 4;
+      text-align: right;
+    }
+
+    /* 4:5, same as the product cards — so the same portrait assets
+       used on social media fill the banner without cropping the
+       sides. */
+    .hero-banner,
+    .hero-banner__media {
+      height: auto;
+      min-height: 0;
+      aspect-ratio: 4 / 5;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_banner",
+  "settings": [
+    {
+      "type": "select",
+      "id": "background_type",
+      "label": "t:labels.background_type",
+      "options": [
+        { "value": "image", "label": "t:options.background_type.image" },
+        { "value": "color", "label": "t:options.background_type.color" }
+      ],
+      "default": "image"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "t:labels.background_color",
+      "info": "t:labels.background_color_info",
+      "default": "#e5e5e5",
+      "visible_if": "{{ section.settings.background_type == 'color' }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:labels.image_mobile"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "range",
+      "id": "image_darken",
+      "label": "t:labels.image_darken",
+      "info": "t:labels.image_darken_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "t:labels.headline",
+      "default": "Headline"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "t:labels.subtitle"
+    },
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "t:labels.cta_text",
+      "default": "Call to action"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link"
+    },
+    {
+      "type": "select",
+      "id": "text_color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "dark"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_logo",
+      "label": "t:labels.show_logo",
+      "default": false
+    }
+  ],
+  "presets": [{ "name": "t:general.hero_banner" }],
+  "enabled_on": {
+    "templates": ["index"]
+  }
+}
+{% endschema %}

@@ -1,0 +1,464 @@
+{% doc %}
+  Renders an Instagram-Stories-style tile inside a collection's
+  product grid: a segmented progress bar at the top, one
+  auto-advancing image/video slide at a time, left/right tap zones to
+  navigate manually, and a title underneath (same info-row treatment
+  as a product card). Sized as a single grid cell, same footprint as
+  one product card. Used by sections/collection.liquid, sourced from
+  a "Story" metaobject so different collections can show different
+  stories (or several, at different grid positions) — see that
+  section's schema comment for the metaobject/metafield setup.
+
+  `render` scopes are isolated, so the story and speed are passed in
+  explicitly rather than read from `section`/`collection` directly.
+
+  @param {object} story - A "Story" metaobject (fields: title, slides — a list of image/video files, product — an optional linked product, link — an optional URL or Link that the title row points to instead, winning over the product's URL)
+  @param {number} speed - Seconds each slide stays visible before advancing
+  @param {string} [bar_color] - Progress bar colour, 'light' (white, default) or 'dark' (black); a story's own "bar_color" field ("Weiß"/"Schwarz") wins
+
+  @example
+  {% render 'collection-grid-story', story: story, speed: section.settings.story_speed, bar_color: section.settings.story_bar_color %}
+{% enddoc %}
+
+{% liquid
+  assign slides = story.slides.value
+  assign linked_product = story.product.value
+
+  # `link` can be a "URL" field (plain string) or a "Link" field (url + text)
+  assign story_link = story.link.value.url | default: story.link.value
+  assign story_link_text = story.link.value.text
+  assign story_title = story.title | default: story_link_text
+  assign story_url = story_link | default: linked_product.url
+
+  assign story_bar_color = bar_color | default: 'light'
+  assign story_bar_override = story.bar_color.value | downcase | strip
+  case story_bar_override
+    when 'schwarz', 'black', 'dark'
+      assign story_bar_color = 'dark'
+    when 'weiß', 'weiss', 'white', 'light'
+      assign story_bar_color = 'light'
+  endcase
+
+  assign color_option = linked_product.options_with_values | where: 'name', 'Farbe' | first
+  unless color_option
+    assign color_option = linked_product.options_with_values | where: 'name', 'Color' | first
+  endunless
+  if color_option
+    assign color_count = color_option.values.size
+  endif
+%}
+
+<div class="collection-grid-story-card">
+  <div class="collection-grid-story collection-grid-story--bar-{{ story_bar_color }}" data-story data-story-speed="{{ speed | default: 4 }}">
+    <div class="collection-grid-story__bar">
+      {% for file in slides %}
+        <span class="collection-grid-story__segment"><span class="collection-grid-story__segment-fill"></span></span>
+      {% endfor %}
+    </div>
+
+    <div class="collection-grid-story__slides">
+      {% for file in slides %}
+        <div class="collection-grid-story__slide">
+          {% case file.media_type %}
+            {% when 'video' %}
+              {{
+                file
+                | video_tag:
+                  image_size: '1200x',
+                  autoplay: false,
+                  loop: true,
+                  muted: true,
+                  controls: false,
+                  playsinline: true,
+                  width: file.width,
+                  height: file.height
+              }}
+            {% else %}
+              <img
+                src="{{ file.preview_image | image_url: width: 600 }}"
+                srcset="
+                  {{ file.preview_image | image_url: width: 600 }} 1x,
+                  {{ file.preview_image | image_url: width: 1200 }} 2x
+                "
+                alt="{{ file.preview_image.alt | default: '' | escape }}"
+                loading="lazy"
+                width="{{ file.preview_image.width }}"
+                height="{{ file.preview_image.height }}"
+              >
+          {% endcase %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <button
+      type="button"
+      class="collection-grid-story__zone collection-grid-story__zone--prev"
+      data-story-prev
+      aria-label="{{ 'general.story.previous' | t }}"
+    ></button>
+    <button
+      type="button"
+      class="collection-grid-story__zone collection-grid-story__zone--next"
+      data-story-next
+      aria-label="{{ 'general.story.next' | t }}"
+    ></button>
+  </div>
+
+  {% if linked_product %}
+    <a href="{{ story_url }}" class="collection-grid-story-card__info">
+      <p class="collection-grid-story-card__title">
+        {{- story_title | default: linked_product.title -}}
+        {%- if settings.show_sold_out_label and linked_product.available == false -%}
+          <sup class="collection-grid-story-card__sold-out">{{ 'products.sold_out' | t }}</sup>
+        {%- endif -%}
+      </p>
+      <p class="collection-grid-story-card__price">{{ linked_product.price | divided_by: 100 }} €</p>
+      {% if color_count > 0 %}
+        <div class="collection-grid-story-card__colors-wrap">
+          <p class="collection-grid-story-card__colors">
+            {%- if color_count == 1 -%}
+              {{ color_option.values.first.name }}
+            {%- else -%}
+              {{ 'products.card.colors' | t: count: color_count }}
+            {%- endif -%}
+          </p>
+          <div class="collection-grid-story-card__swatches" aria-hidden="true">
+            {% for value in color_option.values %}
+              {% assign swatch_delay = forloop.index0 | times: 0.015 %}
+              <span
+                class="collection-grid-story-card__swatch-dot"
+                style="background-color: {{ value.swatch.color | default: '#cccccc' }};{% if value.swatch.image %} background-image: url({{ value.swatch.image | image_url: width: 30 }});{% endif %} transition-delay: {{ swatch_delay }}s;"
+              ></span>
+            {% endfor %}
+          </div>
+        </div>
+      {% elsif linked_product.variants.size > 1 %}
+        <p class="collection-grid-story-card__variants">
+          {{ 'products.card.colors' | t: count: linked_product.variants.size }}
+        </p>
+      {% endif %}
+    </a>
+  {% elsif story_link != blank %}
+    <a href="{{ story_link }}" class="collection-grid-story-card__info">
+      <p class="collection-grid-story-card__title">{{ story_title }}</p>
+    </a>
+  {% elsif story_title != blank %}
+    <p class="collection-grid-story-card__title">{{ story_title }}</p>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  /* Same outer structure as .product-card (snippets/product-card.liquid)
+     — media block, gap, then a text row below — so it lines up flush
+     with its neighbors. */
+  .collection-grid-story-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Same footprint as .product-card__media — no column/row span, just
+     the same aspect-ratio, sized as a single grid cell. */
+  .collection-grid-story {
+    position: relative;
+    aspect-ratio: 192 / 240;
+    overflow: hidden;
+    background-color: var(--color-muted-background, #eee);
+  }
+
+  .collection-grid-story__bar {
+    position: absolute;
+    top: var(--space-8);
+    left: var(--space-8);
+    right: var(--space-8);
+    z-index: 2;
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .collection-grid-story__segment {
+    flex: 1 0 0;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.4);
+    overflow: hidden;
+  }
+
+  .collection-grid-story__segment-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background-color: #fff;
+  }
+
+  /* Black bar for light imagery where the white one disappears. */
+  .collection-grid-story--bar-dark .collection-grid-story__segment {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+
+  .collection-grid-story--bar-dark .collection-grid-story__segment-fill {
+    background-color: #000;
+  }
+
+  .collection-grid-story__segment.is-done .collection-grid-story__segment-fill {
+    width: 100%;
+  }
+
+  .collection-grid-story__segment.is-active .collection-grid-story__segment-fill {
+    animation: collection-grid-story-fill var(--story-duration, 4s) linear forwards;
+  }
+
+  @keyframes collection-grid-story-fill {
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collection-grid-story__segment.is-active .collection-grid-story__segment-fill {
+      animation: none;
+      width: 100%;
+    }
+  }
+
+  .collection-grid-story__slides {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s ease-out;
+  }
+
+  /* Same hover zoom as .product-card__images (snippets/product-card.liquid)
+     — triggered by hovering the whole card, not just the media box. */
+  @media (hover: hover) and (pointer: fine) {
+    .collection-grid-story-card:hover .collection-grid-story__slides {
+      transform: scale(1.03);
+    }
+  }
+
+  .collection-grid-story__slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .collection-grid-story__slide.is-active {
+    opacity: 1;
+  }
+
+  .collection-grid-story__slide img,
+  .collection-grid-story__slide video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .collection-grid-story__zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    z-index: 1;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .collection-grid-story__zone--prev {
+    left: 0;
+  }
+
+  .collection-grid-story__zone--next {
+    right: 0;
+  }
+
+  /* Same treatment as .product-card__title/__info/__colors. */
+  .collection-grid-story-card__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    color: var(--color-foreground);
+  }
+
+  /* Same as .product-card__sold-out. */
+  .collection-grid-story-card__sold-out {
+    margin-left: var(--space-4);
+    font-size: 0.7em;
+    color: rgba(0, 0, 0, 0.4);
+    line-height: 0;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    vertical-align: 0.3em;
+    vertical-align: calc(1cap / 0.7 - 1cap);
+  }
+
+  .collection-grid-story-card__info {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .collection-grid-story-card__price {
+    margin: 0;
+  }
+
+  .collection-grid-story-card__variants {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.4);
+  }
+
+  /* Same hover swap as .product-card__colors/__swatches. */
+  .collection-grid-story-card__colors-wrap {
+    position: relative;
+    min-height: 1em;
+  }
+
+  .collection-grid-story-card__colors {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.4);
+    transition: opacity 0.2s ease;
+  }
+
+  .collection-grid-story-card__swatches {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  /* An image swatch (e.g. a wood grain) wins over the colour. */
+  .collection-grid-story-card__swatch-dot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    background-size: cover;
+    background-position: center;
+    scale: 0.75;
+    transition: scale 0.2s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .collection-grid-story-card:hover .collection-grid-story-card__colors {
+      opacity: 0;
+    }
+
+    .collection-grid-story-card:hover .collection-grid-story-card__swatches {
+      opacity: 1;
+    }
+
+    .collection-grid-story-card:hover .collection-grid-story-card__swatch-dot {
+      scale: 1;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  document.querySelectorAll('[data-story]').forEach((story) => {
+    const slides = Array.from(story.querySelectorAll('.collection-grid-story__slide'));
+    const segments = Array.from(story.querySelectorAll('.collection-grid-story__segment'));
+    if (slides.length === 0) return;
+
+    const durationMs = (Number(story.dataset.storySpeed) || 4) * 1000;
+    story.style.setProperty('--story-duration', `${durationMs}ms`);
+
+    let index = 0;
+    let visible = true;
+
+    // The active bar segment's CSS animation is the clock: when it ends,
+    // the next slide comes in. Bar and slide can't drift apart, and
+    // pausing the animation (off-screen) pauses the story with it.
+    const activeFill = () => segments[index]?.querySelector('.collection-grid-story__segment-fill');
+
+    // Videos only run while their slide is showing, and start from the
+    // beginning each time it comes round — not silently ahead in the
+    // background.
+    const syncVideos = (restart) => {
+      slides.forEach((slide, i) => {
+        const video = slide.querySelector('video');
+        if (!video) return;
+        if (i === index && visible) {
+          if (restart) video.currentTime = 0;
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    };
+
+    // Lazy images on hidden slides may not be downloaded/decoded yet —
+    // wait for the next one (max. 2s) so the switch doesn't show a gap.
+    const ready = (i) => {
+      const img = slides[i].querySelector('img');
+      if (!img) return Promise.resolve();
+      img.loading = 'eager';
+      const decoded = img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      return Promise.race([decoded, new Promise((resolve) => setTimeout(resolve, 2000))]);
+    };
+
+    const render = () => {
+      slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+      syncVideos(true);
+      segments.forEach((segment, i) => {
+        segment.classList.remove('is-active', 'is-done');
+        if (i < index) segment.classList.add('is-done');
+      });
+      // Force a reflow so the fill animation restarts from 0 even when
+      // the same segment becomes active again.
+      void story.offsetWidth;
+      segments[index]?.classList.add('is-active');
+      const fill = activeFill();
+      if (fill) fill.style.animationPlayState = visible ? 'running' : 'paused';
+      if (slides.length > 1) ready((index + 1) % slides.length);
+    };
+
+    let pending = 0;
+    const goTo = (nextIndex) => {
+      const target = (nextIndex + slides.length) % slides.length;
+      const token = ++pending;
+      ready(target).then(() => {
+        if (token !== pending) return;
+        index = target;
+        render();
+      });
+    };
+
+    if (slides.length > 1) {
+      segments.forEach((segment, i) => {
+        segment.addEventListener('animationend', () => {
+          if (i === index) goTo(index + 1);
+        });
+      });
+    }
+
+    render();
+
+    story.querySelector('[data-story-prev]')?.addEventListener('click', () => goTo(index - 1));
+    story.querySelector('[data-story-next]')?.addEventListener('click', () => goTo(index + 1));
+
+    // Pause the story while the tile is off-screen — it picks up where
+    // it left off instead of running on unseen (or paying for a looping
+    // background video's decode cost).
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          visible = entry.isIntersecting;
+          syncVideos(false);
+          const fill = activeFill();
+          if (fill) fill.style.animationPlayState = visible ? 'running' : 'paused';
+        });
+      }, { threshold: 0.25 });
+      observer.observe(story);
+    }
+  });
+{% endjavascript %}

@@ -1,0 +1,55 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "simple_page_agb": {
+      "type": "simple-page",
+      "blocks": {
+        "simple_page_item_agb": {
+          "type": "simple-page-item",
+          "settings": {
+            "heading": "Überschrift",
+            "body": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>"
+          },
+          "blocks": {}
+        },
+        "simple_page_item_nkGYad": {
+          "type": "simple-page-item",
+          "settings": {
+            "heading": "Überschrift",
+            "body": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>"
+          },
+          "blocks": {}
+        },
+        "simple_page_item_BP9Akd": {
+          "type": "simple-page-item",
+          "settings": {
+            "heading": "Überschrift",
+            "body": "<p>Platzhaltertext. Hier steht ein kurzer Absatz, der später durch eigenen Inhalt ersetzt wird.</p>"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "simple_page_item_agb",
+        "simple_page_item_nkGYad",
+        "simple_page_item_BP9Akd"
+      ],
+      "name": "t:general.simple_page",
+      "settings": {
+        "submenu": "footer-2",
+        "headline": "Überschrift"
+      }
+    }
+  },
+  "order": [
+    "simple_page_agb"
+  ]
+}

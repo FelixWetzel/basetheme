@@ -1,0 +1,38 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "simple_page_QXYNLm": {
+      "type": "simple-page",
+      "blocks": {
+        "withdrawal_form_hbRHkj": {
+          "type": "withdrawal-form",
+          "name": "t:general.withdrawal_form",
+          "settings": {
+            "button_label": "Widerruf bestätigen",
+            "success_text": "<p>Dein Widerruf ist bei uns eingegangen. Wir bestätigen dir den Eingang umgehend per E-Mail.</p>"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "withdrawal_form_hbRHkj"
+      ],
+      "name": "t:general.simple_page",
+      "settings": {
+        "submenu": "footer-2",
+        "headline": "Überschrift"
+      }
+    }
+  },
+  "order": [
+    "simple_page_QXYNLm"
+  ]
+}

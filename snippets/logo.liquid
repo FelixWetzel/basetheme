@@ -1,0 +1,48 @@
+{% doc %}
+  Renders a logo uploaded in the theme settings (Theme-Einstellungen → Logo).
+
+  With "Logo einfärben" switched on (default), the image is used as a
+  CSS mask filled with currentColor, so a single-colour logo (SVG or
+  transparent PNG) takes the text colour of wherever it sits, exactly
+  like the old inline SVGs did. Switched off, it's a plain <img> in
+  its original colours.
+
+  Without an uploaded image, the shop name is shown as text (or
+  nothing, with fallback: 'none').
+
+  @param {string} type - 'main' (header wordmark), 'large' (footer,
+    password page, screensaver, logo intro) or 'signet' (collapsed
+    header logo, hero banners)
+  @param {string} [fallback] - 'text' (default) or 'none'
+
+  @example
+  {% render 'logo', type: 'large' %}
+{% enddoc %}
+{%- liquid
+  case type
+    when 'large'
+      assign logo_image = settings.logo_large | default: settings.logo
+    when 'signet'
+      assign logo_image = settings.logo_signet
+    else
+      assign logo_image = settings.logo
+  endcase
+-%}
+{%- if logo_image != blank -%}
+  {%- if settings.logo_recolor -%}
+    <span
+      class="theme-logo theme-logo--mask theme-logo--{{ type }}"
+      style="--logo-src: url('{{ logo_image | image_url: width: 3000 }}'); --logo-ratio: {{ logo_image.aspect_ratio | default: 1 }};"
+      role="img"
+      aria-label="{{ shop.name | escape }}"
+    ></span>
+  {%- else -%}
+    {{
+      logo_image
+      | image_url: width: 3000
+      | image_tag: class: 'theme-logo theme-logo--image', alt: shop.name, loading: 'eager', widths: '400, 800, 1600, 3000'
+    }}
+  {%- endif -%}
+{%- elsif fallback != 'none' -%}
+  <span class="theme-logo theme-logo--text theme-logo--{{ type }}">{{ shop.name }}</span>
+{%- endif -%}

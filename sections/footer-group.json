@@ -1,0 +1,67 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "footer",
+  "name": "t:general.footer",
+  "sections": {
+    "ticker_r8Rmew": {
+      "type": "ticker",
+      "name": "t:general.ticker",
+      "settings": {
+        "text": "Lauftext",
+        "speed": 15,
+        "link": "",
+        "spacing_top": "large",
+        "spacing_bottom": "small"
+      }
+    },
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "footer_column_HxN46F": {
+          "type": "footer-column",
+          "name": "t:general.footer_column",
+          "settings": {
+            "menu": "footer"
+          },
+          "blocks": {}
+        },
+        "footer_column_AwkQa7": {
+          "type": "footer-column",
+          "name": "t:general.footer_column",
+          "settings": {
+            "menu": "footer-2"
+          },
+          "blocks": {}
+        },
+        "footer_column_7zXRCJ": {
+          "type": "footer-column",
+          "name": "t:general.footer_column",
+          "settings": {
+            "menu": "footer-3"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "footer_column_HxN46F",
+        "footer_column_AwkQa7",
+        "footer_column_7zXRCJ"
+      ],
+      "settings": {
+        "show_payment_icons": false
+      }
+    }
+  },
+  "order": [
+    "ticker_r8Rmew",
+    "footer"
+  ]
+}

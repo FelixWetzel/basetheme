@@ -1,0 +1,181 @@
+{% comment %}
+  Search page: search form plus results (products, articles, or
+  pages), styled to match the rest of the theme instead of the raw
+  Skeleton-theme defaults.
+{% endcomment %}
+
+<div class="search-page full-width">
+  <p class="search-page__title">{{ 'search.title' | t }}</p>
+
+  <form action="{{ routes.search_url }}" method="get" role="search" class="search-page__form">
+    <input
+      type="search"
+      name="q"
+      class="search-page__input"
+      value="{{ search.terms | escape }}"
+      placeholder="{{ 'search.placeholder' | t }}"
+    >
+    <button type="submit" class="search-page__submit">{{ 'search.submit' | t }}</button>
+  </form>
+
+  {% if search.performed %}
+    {% if search.results_count == 0 %}
+      <p class="search-page__status">{{ 'search.no_results_html' | t: terms: search.terms }}</p>
+    {% else %}
+      <p class="search-page__status">
+        {{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}
+      </p>
+
+      {% paginate search.results by 20 %}
+        <div class="search-page__results">
+          {% # Search result items may be an article, a page, or a product. %}
+          {% for result in search.results %}
+            <a href="{{ result.url }}" class="search-page__result">
+              {% assign featured_image = result.featured_image | default: result.image %}
+              {% if featured_image %}
+                <div class="search-page__result-thumbnail">
+                  <img
+                    src="{{ featured_image | image_url: width: 200 }}"
+                    srcset="
+                      {{ featured_image | image_url: width: 200 }} 1x,
+                      {{ featured_image | image_url: width: 400 }} 2x
+                    "
+                    alt="{{ featured_image.alt | default: result.title | escape }}"
+                    loading="lazy"
+                    width="{{ featured_image.width }}"
+                    height="{{ featured_image.height }}"
+                  >
+                </div>
+              {% endif %}
+              <div class="search-page__result-content">
+                <p class="search-page__result-title">{{ result.title }}</p>
+                {% if result.price %}
+                  <p class="search-page__result-price">{{ result.price | money_with_currency }}</p>
+                {% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+
+        {% if paginate.pages > 1 %}
+          <div class="search-page__pagination">
+            {{ paginate | default_pagination }}
+          </div>
+        {% endif %}
+      {% endpaginate %}
+    {% endif %}
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .search-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+    padding: var(--space-16) var(--page-margin) var(--space-96);
+  }
+
+  .search-page__title {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .search-page__form {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    max-width: 28rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-8);
+  }
+
+  .search-page__input {
+    flex: 1 0 0;
+    min-width: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-foreground);
+    outline: none;
+  }
+
+  .search-page__submit {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .search-page__submit:hover {
+      color: var(--color-foreground);
+    }
+  }
+
+  .search-page__status {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  .search-page__results {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-32) var(--space-4);
+  }
+
+  @media (min-width: 750px) {
+    .search-page__results {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .search-page__result {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    text-decoration: none;
+    color: var(--color-foreground);
+  }
+
+  .search-page__result-thumbnail img {
+    width: 100%;
+    height: auto;
+  }
+
+  .search-page__result-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-page__result-title {
+    margin: 0;
+  }
+
+  .search-page__result-price {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  .search-page__pagination {
+    display: flex;
+    justify-content: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.search",
+  "settings": [],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

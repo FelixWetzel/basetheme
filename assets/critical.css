@@ -1,0 +1,519 @@
+/** Critical CSS for the theme. This file is included on every page. */
+
+/**
+ * Design tokens extracted from the Figma file (Desktop & Mobile).
+ * Color and font-family tokens are merchant-editable and set at runtime
+ * in `snippets/css-variables.liquid`; the values below are the fixed
+ * parts of the system (spacing scale, type scale, derived colors) that
+ * sections and blocks can rely on without duplicating raw values.
+ */
+:root {
+  /* Spacing scale */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-32: 32px;
+  --space-96: 96px;
+
+  /* Type scale (base body/label style used across the design) */
+  --font-size-body: 13px;
+  --line-height-body: 16px;
+  --letter-spacing-body: 0.01em;
+  /* A touch more open than body text — applied wherever
+     text-transform: uppercase shows up, since all-caps type reads
+     tighter than mixed-case at the same tracking. */
+  --letter-spacing-versal: 0.01em;
+
+  /* Derived colors */
+  --color-border: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  --color-muted: color-mix(in srgb, var(--color-foreground) 50%, transparent);
+  /* Same tone as --color-muted, but mixed against the background
+     instead of transparent — a genuinely opaque gray for things sitting
+     over other content (e.g. a sticky button over scrolling text),
+     where --color-muted's built-in translucency would show through. */
+  --color-muted-solid: color-mix(in srgb, var(--color-foreground) 50%, var(--color-background));
+}
+
+/* Reset styles inspired by https://www.joshwcomeau.com/css/custom-css-reset/ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-height: 100svh;
+}
+
+/* Grows to fill any leftover viewport height on short pages, pushing
+   the footer down to the bottom of the viewport instead of leaving it
+   floating right below a short page's content. */
+.main-content {
+  flex: 1 0 auto;
+}
+
+html:has(dialog[scroll-lock][open], details[scroll-lock][open]) {
+  overflow: hidden;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* iPhone footage is HDR (HLG). On HDR screens Safari shows it brighter
+   than page white and dims everything else around it; keep it at SDR. */
+video {
+  dynamic-range-limit: standard;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  border-radius: 0;
+}
+
+select {
+  background-color: var(--color-background);
+  color: currentcolor;
+}
+
+dialog {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+p:empty {
+  display: none;
+}
+
+:is(p, h1, h2, h3, h4, h5, h6):first-child,
+:empty:first-child + :where(p, h1, h2, h3, h4, h5, h6) {
+  margin-block-start: 0;
+}
+
+:is(p, h1, h2, h3, h4, h5, h6):last-child,
+:where(p, h1, h2, h3, h4, h5, h6) + :has(+ :empty:last-child) {
+  margin-block-end: 0;
+}
+
+/** Theme styles below */
+body {
+  font-family: var(--font-primary--family);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  letter-spacing: var(--letter-spacing-body);
+  font-feature-settings: var(--font-primary--feature-settings);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  text-wrap: wrap;
+  /* Without this, custom webfonts can render noticeably
+     heavier/blurrier than vector artwork (e.g. the logo) at small
+     sizes, especially on macOS. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Versal parentheses only in the menu (see snippets/css-variables.liquid). */
+.site-header,
+.header-menu,
+.cart-drawer__count {
+  font-feature-settings: var(--font-primary--feature-settings-versal);
+}
+
+/** Logo (snippets/logo.liquid) */
+
+/* The uploaded logo is a mask filled with the text colour, so it can
+   be recoloured per context (light on images, dark on the page). Size
+   it by giving it a width OR a height; the other side follows from
+   the image's aspect ratio. */
+.theme-logo {
+  display: block;
+  max-width: 100%;
+}
+
+.theme-logo--mask {
+  aspect-ratio: var(--logo-ratio);
+  background-color: currentColor;
+  -webkit-mask: var(--logo-src) center / contain no-repeat;
+  mask: var(--logo-src) center / contain no-repeat;
+}
+
+.theme-logo--image {
+  object-fit: contain;
+}
+
+/* No logo uploaded: the shop name as text. */
+.theme-logo--text {
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.theme-logo--text.theme-logo--large {
+  /* Roughly fills the content width for a short shop name. */
+  font-size: calc((100vw - 2 * var(--page-margin)) / 8);
+  white-space: normal;
+}
+
+/** Section layout utilities */
+
+/**
+ * Setup a grid that enables both full-width and constrained layouts
+ * depending on the class of the child elements.
+ *
+ * There is no max page width: the content area always stretches to
+ * fill the viewport, minus the page margin on each side. A child
+ * element spanning a fraction of the content width (e.g. a 4-up
+ * grid) is therefore always that fraction of the actual viewport.
+ *
+ * When a child element is given the `full-width` class, it will span
+ * the entire viewport, margins included.
+ */
+.shopify-section {
+  --content-width: calc(100% - var(--page-margin) * 2);
+  --content-margin: minmax(var(--page-margin), 1fr);
+  --content-grid: var(--content-margin) var(--content-width) var(--content-margin);
+
+  /* This is required to make <img> elements work as background images */
+  position: relative;
+  grid-template-columns: var(--content-grid);
+  display: grid;
+  width: 100%;
+}
+
+/* Child elements, by default, are constrained to the central column of the grid. */
+.shopify-section > * {
+  grid-column: 2;
+}
+
+/* Child elements that use the full-width utility class span the entire viewport. */
+.shopify-section > .full-width {
+  grid-column: 1 / -1;
+}
+
+/* The footer already reserves 96px above itself (see sections/footer.liquid)
+   — on the custom page sections (FAQ, Händler, simple text pages,
+   About/Partner's building blocks, the product grid), the last one on the page shouldn't
+   add its own bottom spacing on top of that, or the gap doubles to
+   ~192px. Scoped to just these classes — collection pages (and any
+   other section) keep their own spacing as-is. */
+.main-content > .shopify-section:last-child > .full-width:is(
+  .faq-header,
+  .dealers-header,
+  .simple-page-header,
+  .media-text,
+  .big-text,
+  .page-submenu-section,
+  .cart-page,
+  .search-page,
+  .product-grid
+) {
+  padding-bottom: 0;
+}
+
+/* Shopify's built-in cookie/consent banner (Settings > Customer
+   privacy) isn't a theme file and can't be edited there — but it
+   renders as regular DOM (a plain <section id="shopify-pc__banner">,
+   not a shadow root or iframe), so it can still be restyled here.
+   Targeted by ID (not class) for specificity, since Shopify appears to
+   inject its own banner stylesheet after this one loads — with two
+   equally-specific !important rules the later one in source order
+   wins, so out-specificity-ing it is what actually makes these stick,
+   not just the !important itself. Colors/background pick up the
+   merchant's brand tokens instead of Shopify's defaults; font-size is
+   unified to the theme's body size instead of mixing sizes per
+   element. */
+#shopify-pc__banner {
+  font-family: var(--font-primary--family) !important;
+  background-color: var(--color-background) !important;
+  color: var(--color-foreground) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: var(--space-16) !important;
+  bottom: var(--space-16) !important;
+}
+
+/* Neutralized so the 16px above doesn't stack with whatever padding
+   Shopify's own stylesheet puts on this inner wrapper. */
+.shopify-pc__banner__wrapper {
+  padding: 0 !important;
+}
+
+#shopify-pc__banner * {
+  font-size: var(--font-size-body) !important;
+  line-height: var(--line-height-body) !important;
+  font-weight: normal !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+#shopify-pc__banner__body-title {
+  text-transform: uppercase !important;
+}
+
+#shopify-pc__banner__btn-accept {
+  background-color: var(--color-foreground) !important;
+  color: var(--color-background) !important;
+  border-color: var(--color-foreground) !important;
+}
+
+/* Button order left to right: manage preferences, decline ("only
+   necessary"), accept. Shopify renders them as manage, accept,
+   decline in one flex row (and reorders them itself via nth-child on
+   small screens), so explicit `order`s by ID pin the sequence. */
+#shopify-pc__banner__btn-manage-prefs {
+  order: 1 !important;
+}
+
+#shopify-pc__banner__btn-decline {
+  order: 2 !important;
+}
+
+#shopify-pc__banner__btn-accept {
+  order: 3 !important;
+}
+
+#shopify-pc__banner__btn-decline {
+  background-color: transparent !important;
+  color: var(--color-foreground) !important;
+  border: 1px solid var(--color-foreground) !important;
+}
+
+/* Gap below the Accept/Decline button row (e.g. down to the "Manage
+   preferences" link, or the banner's own bottom padding when there
+   is none). Targeted by both id and class since Shopify's markup for
+   this wrapper isn't documented and either could be present. */
+#shopify-pc__banner__btn-wrapper,
+.shopify-pc__banner__btn-wrapper {
+  margin-bottom: var(--space-16) !important;
+}
+
+#shopify-pc__banner__btn-manage-prefs {
+  background: none !important;
+  border: none !important;
+  color: var(--color-foreground) !important;
+  text-decoration: none !important;
+}
+
+/* Small filled triangle in front of every call to action (banners,
+   announcement bar, product grid) — same family as the filled 4px
+   square bullet on active links. */
+.cta::before {
+  content: '';
+  display: inline-block;
+  width: 4.5px;
+  height: 5px;
+  /* Centred on the capitals (~0.7em tall). */
+  vertical-align: calc(0.35em - 2.5px);
+  margin-right: var(--space-4);
+  background-color: currentcolor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* Thin "+" drawn as a mask, used instead of the font's own "+",
+   which is much heavier than its "−" (accordions, zoom cursor). */
+.icon-plus::before {
+  content: '';
+  display: inline-block;
+  /* Centred on the height of the font's "−" (~0.35em). */
+  width: 7px;
+  height: 7px;
+  vertical-align: calc(0.35em - 3.5px);
+  background-color: currentcolor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 0v10M0 5h10' fill='none' stroke='%23000' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+/* Links inside running text (product descriptions, accordions, FAQ
+   answers, simple pages, policy pages, …): text colour, underlined;
+   the underline disappears on hover. */
+.rte a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rte a:hover {
+    text-decoration: none;
+  }
+}
+
+/* Bold and every heading level from the rich text editor all read the
+   same: body size and weight, just set in versals. */
+.rte :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  font-size: inherit;
+  font-weight: normal;
+  line-height: inherit;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-versal);
+}
+
+/* Keyboard focus: a fine line in the text colour around links and
+   buttons, only when navigating by keyboard (:focus-visible), so it
+   never shows on mouse clicks. The drawers' close buttons opt out,
+   since they receive focus automatically when a drawer opens. */
+:is(a, button, summary, [tabindex]):focus-visible {
+  outline: 1px solid var(--color-foreground);
+  outline-offset: 2px;
+}
+
+/* Hidden visually, still read by search engines and screen readers. */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "+ Mehr lesen" (snippets/read-more.liquid, assets/read-more.js): the
+   text clamped to four lines (six for the large text section on
+   mobile, sections/text.liquid), the toggle below it
+   only when the text runs longer. */
+.read-more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.read-more__text {
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.read-more__text.is-expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+/* Rich text (the text setting of the media-text and text sections):
+   paragraphs and lists one empty line apart; lists flush with the
+   text, with the theme's square bullets in the text colour. */
+.read-more__text--rich :is(p, ul, ol) {
+  margin: 0;
+}
+
+.read-more__text--rich > * + * {
+  margin-top: 1lh;
+}
+
+.read-more__text--rich :is(ul, ol) {
+  padding: 0;
+  list-style: none;
+}
+
+.read-more__text--rich ol {
+  counter-reset: read-more-list;
+}
+
+.read-more__text--rich li {
+  position: relative;
+  padding-left: calc(4px + var(--space-6));
+}
+
+.read-more__text--rich ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 4px;
+  height: 4px;
+  background-color: currentcolor;
+}
+
+.read-more__text--rich ol > li {
+  counter-increment: read-more-list;
+  padding-left: 1.5em;
+}
+
+.read-more__text--rich ol > li::before {
+  content: counter(read-more-list) '.';
+  position: absolute;
+  left: 0;
+}
+
+.read-more__toggle {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  /* The surrounding text colour, so it also works in white on a
+     banner image (headline banner). */
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.read-more__toggle[hidden] {
+  display: none;
+}
+
+/* Collapsed: thin "+" from .icon-plus in front of the label.
+   Expanded: the font's own "−" instead, like the accordions. */
+.read-more__toggle::before {
+  margin-right: 0.3em;
+}
+
+.read-more__toggle.is-expanded::before {
+  content: '−';
+  width: auto;
+  height: auto;
+  vertical-align: baseline;
+  background: none;
+  mask: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .read-more__toggle:hover {
+    color: color-mix(in srgb, currentColor 75%, transparent);
+  }
+}
+
+/* Shopify's hCaptcha badge for customer/contact forms (newsletter
+   popup, withdrawal form), fixed to the bottom right of the body.
+   The challenge, when one is needed, is a separate element. */
+#shop-hcaptcha-badge-container {
+  display: none !important;
+}
+
+/* hCaptcha also appends an empty .h-captcha div to the form; out of
+   the flow, so it doesn't add a flex/grid gap after the last field
+   (it pushed the newsletter popup's field and button up). Not
+   display: none, which could keep the invisible widget from running. */
+form .h-captcha {
+  position: absolute;
+}

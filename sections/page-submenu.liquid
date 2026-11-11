@@ -1,0 +1,37 @@
+{% comment %}
+  A standalone submenu section (see snippets/page-submenu.liquid) for
+  pages built from separate stacked sections — e.g. About or Partner
+  und Manufakturen (headline-banner + media-text) — which have no
+  shared wrapping header section like sections/faq.liquid does.
+{% endcomment %}
+
+<div class="page-submenu-section full-width">
+  {% render 'page-submenu', menu: section.settings.submenu %}
+</div>
+
+{% stylesheet %}
+  .page-submenu-section {
+    padding-top: var(--space-16);
+    padding-bottom: 0;
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.page_submenu",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "submenu",
+      "label": "t:labels.submenu",
+      "info": "t:labels.submenu_info"
+    }
+  ],
+  "presets": [{ "name": "t:general.page_submenu" }],
+  "enabled_on": {
+    "templates": ["page"]
+  }
+}
+{% endschema %}

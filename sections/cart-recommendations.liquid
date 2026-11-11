@@ -1,0 +1,25 @@
+{% comment %}
+  The cart drawer's "Passt dazu" carousel topped up with Shopify's
+  automatic recommendations (after the cart items' hand-picked ones).
+  Not placed in any template — fetched on demand by
+  snippets/cart-drawer.liquid with `section_id=cart-recommendations`
+  and the first cart item's `product_id`.
+{% endcomment %}
+
+{% liquid
+  assign automatic = null
+  if recommendations.performed
+    assign automatic = recommendations.products
+  endif
+  render 'cart-recommendations', fallback_products: automatic
+%}
+
+{% schema %}
+{
+  "name": "t:general.cart_recommendations",
+  "settings": [],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

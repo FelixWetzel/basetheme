@@ -1,0 +1,29 @@
+{% comment %}
+  Outputs how many cards a collection's grid shows: one per colour
+  value (products without several colours count once). Used for the
+  superscript counts in the collection heading and submenu.
+  Liquid caps an unpaginated collection.products at 50 products — pass
+  the paginated `card_products` instead (inside a paginate tag) to count
+  more. Not named `products`: collection pages have a global `products`
+  (the current collection's) that would leak in and override every
+  other collection's count.
+
+  Usage: {% render 'collection-card-count', collection: some_collection %}
+     or: {% render 'collection-card-count', card_products: collection.products %}
+{% endcomment %}
+{%- liquid
+  assign card_products = card_products | default: collection.products
+  assign card_count = 0
+  for product in card_products
+    assign color_option = product.options_with_values | where: 'name', 'Farbe' | first
+    unless color_option
+      assign color_option = product.options_with_values | where: 'name', 'Color' | first
+    endunless
+    if color_option and color_option.values.size > 1
+      assign card_count = card_count | plus: color_option.values.size
+    else
+      assign card_count = card_count | plus: 1
+    endif
+  endfor
+  echo card_count
+-%}

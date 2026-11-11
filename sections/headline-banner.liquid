@@ -1,0 +1,369 @@
+{% comment %}
+  Like hero-banner (same media handling: desktop/mobile image, video
+  override, scroll parallax) but with a single large statement text
+  anchored top-left instead of a headline/subtitle/CTA group anchored
+  to the bottom. Meant for editorial pages (About, Partner und
+  Manufakturen), not the homepage. An optional second image or video
+  sits beside the first on desktop; on mobile it's hidden by default
+  (setting), or otherwise both stack as 4:5 images, the text over them.
+{% endcomment %}
+
+{% liquid
+  assign has_secondary_media = false
+  if section.settings.image_secondary != blank or section.settings.video_secondary != blank
+    assign has_secondary_media = true
+  endif
+%}
+
+<div class="headline-banner headline-banner--{{ section.settings.text_color }}{% if has_secondary_media %} headline-banner--split{% endif %}{% if has_secondary_media and section.settings.hide_secondary_mobile == false %} headline-banner--stacked-mobile{% endif %} full-width">
+  <div class="headline-banner__media"{% if section.settings.image_darken > 0 %} style="--image-darken: {{ section.settings.image_darken | divided_by: 100.0 }};"{% endif %}>
+    <div class="headline-banner__media-item">
+      {% if section.settings.video != blank %}
+        {{
+          section.settings.video
+          | video_tag:
+            image_size: '1600x',
+            autoplay: true,
+            loop: true,
+            muted: true,
+            controls: false,
+            playsinline: true,
+            width: section.settings.video.width,
+            height: section.settings.video.height
+        }}
+      {% else %}
+        <picture>
+          {% if section.settings.image_mobile != blank %}
+            <source
+              media="(max-width: 749px)"
+              srcset="
+                {{ section.settings.image_mobile | image_url: width: 750 }} 1x,
+                {{ section.settings.image_mobile | image_url: width: 1500 }} 2x
+              "
+            >
+          {% endif %}
+          {% if section.settings.image != blank %}
+            <img
+              src="{{ section.settings.image | image_url: width: 1600 }}"
+              srcset="
+                {{ section.settings.image | image_url: width: 1600 }} 1x,
+                {{ section.settings.image | image_url: width: 3200 }} 2x
+              "
+              alt=""
+              loading="eager"
+              width="{{ section.settings.image.width }}"
+              height="{{ section.settings.image.height }}"
+            >
+          {% endif %}
+        </picture>
+      {% endif %}
+    </div>
+
+    {% if has_secondary_media %}
+      <div class="headline-banner__media-item{% if section.settings.hide_secondary_mobile %} headline-banner__media-item--desktop-only{% endif %}">
+        {% if section.settings.video_secondary != blank %}
+          {{
+            section.settings.video_secondary
+            | video_tag:
+              image_size: '1600x',
+              autoplay: true,
+              loop: true,
+              muted: true,
+              controls: false,
+              playsinline: true,
+              width: section.settings.video_secondary.width,
+              height: section.settings.video_secondary.height
+          }}
+        {% elsif section.settings.image_secondary != blank %}
+          <img
+            src="{{ section.settings.image_secondary | image_url: width: 1600 }}"
+            srcset="
+              {{ section.settings.image_secondary | image_url: width: 1600 }} 1x,
+              {{ section.settings.image_secondary | image_url: width: 3200 }} 2x
+            "
+            alt=""
+            loading="eager"
+            width="{{ section.settings.image_secondary.width }}"
+            height="{{ section.settings.image_secondary.height }}"
+          >
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="headline-banner__content">
+    {% if section.settings.text != blank %}
+      <p class="headline-banner__text">{{ section.settings.text }}</p>
+    {% endif %}
+
+    {% if section.settings.description != blank %}
+      {% render 'read-more', text: section.settings.description, class: 'headline-banner__description' %}
+    {% endif %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .headline-banner {
+    position: relative;
+    isolation: isolate;
+    height: 90svh;
+    min-height: 36rem;
+  }
+
+  /* Sticky within the banner's own height, same as the hero banner's
+     content — stays pinned just below the header while its own
+     section scrolls through the viewport. */
+  .headline-banner__content {
+    position: sticky;
+    top: var(--sticky-offset, var(--header-height, 3.5rem));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-16);
+    padding: var(--space-16) var(--page-margin);
+  }
+
+  @media (max-width: 749px) {
+    /* No gap between the headline and the description below it. */
+    .headline-banner__text + .headline-banner__description {
+      margin-top: calc(-1 * var(--space-16));
+    }
+  }
+
+  @media (min-width: 750px) {
+    .headline-banner__content {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .headline-banner__text {
+      grid-column: 1 / 3;
+    }
+
+    .headline-banner__description {
+      grid-column: 3 / 5;
+    }
+  }
+
+  .headline-banner__media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 90svh;
+    min-height: 36rem;
+    z-index: -1;
+    display: flex;
+    overflow: hidden;
+    /* Distinct timeline name from hero-banner's — safe either way,
+       since each image resolves its own nearest ancestor, but this
+       keeps the two sections uncoupled. */
+    view-timeline-name: --headline-banner-view;
+    view-timeline-axis: block;
+  }
+
+  /* Optional black veil over the image/video, same as the hero
+     banner's. */
+  .headline-banner__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / var(--image-darken, 0));
+    pointer-events: none;
+  }
+
+  /* Side by side on desktop when a second media is set; it's hidden
+     on mobile (below), leaving the first at full width. */
+  .headline-banner__media-item {
+    flex: 1 0 0;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  @media (max-width: 749px) {
+    .headline-banner__media-item--desktop-only {
+      display: none;
+    }
+  }
+
+  .headline-banner__media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .headline-banner__media img,
+  .headline-banner__media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: headline-banner-parallax linear both;
+    animation-timeline: --headline-banner-view;
+    animation-range: cover 0% cover 100%;
+  }
+
+  @keyframes headline-banner-parallax {
+    from {
+      transform: scale(1.12) translateY(-4%);
+    }
+    to {
+      transform: scale(1.12) translateY(4%);
+    }
+  }
+
+  .headline-banner__text {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+    word-break: break-word;
+  }
+
+  /* No max width: runs across its whole half, like media-text's text. */
+  .headline-banner__description {
+    margin: 0;
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .headline-banner--light {
+    color: var(--color-background);
+  }
+
+  .headline-banner--dark {
+    color: var(--color-foreground);
+  }
+
+  @media (max-width: 749px) {
+    .headline-banner,
+    .headline-banner__media {
+      height: 80svh;
+    }
+  }
+
+  /* Desktop, with a second image: the description starts on the same
+     edge as the text in the right half of a two-up hero banner (the
+     middle of the page plus the page margin), i.e. 16px from the right
+     image's edge, instead of the plain grid column (middle + half the
+     4px gap). With a single image it stays on the grid. Last, so the
+     base `margin: 0` above doesn't undo it. */
+  @media (min-width: 750px) {
+    .headline-banner--split .headline-banner__description {
+      margin-left: calc(var(--page-margin) - var(--space-4) / 2);
+    }
+  }
+
+  /* Mobile with the second media shown: both stacked, 4:5 each like
+     the hero banners' mobile images, instead of the fixed-height
+     backdrop — the banner grows to their height, and the text sits
+     over them in the same grid cell, still sticky. Last, so it wins
+     over the 80svh above. */
+  @media (max-width: 749px) {
+    .headline-banner--stacked-mobile {
+      display: grid;
+      height: auto;
+      min-height: 0;
+    }
+
+    .headline-banner--stacked-mobile .headline-banner__media {
+      position: relative;
+      grid-area: 1 / 1;
+      flex-direction: column;
+      height: auto;
+      min-height: 0;
+    }
+
+    .headline-banner--stacked-mobile .headline-banner__media-item {
+      flex: none;
+      height: auto;
+      aspect-ratio: 4 / 5;
+    }
+
+    .headline-banner--stacked-mobile .headline-banner__content {
+      grid-area: 1 / 1;
+      align-self: start;
+    }
+  }
+
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.headline_banner",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:labels.image_mobile"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_secondary",
+      "label": "t:labels.image_secondary",
+      "info": "t:labels.image_secondary_info_headline_banner"
+    },
+    {
+      "type": "video",
+      "id": "video_secondary",
+      "label": "t:labels.video_secondary",
+      "info": "t:labels.video_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_secondary_mobile",
+      "label": "t:labels.hide_secondary_mobile",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "image_darken",
+      "label": "t:labels.image_darken",
+      "info": "t:labels.image_darken_info",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 0
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "Headline"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "t:labels.description"
+    },
+    {
+      "type": "select",
+      "id": "text_color",
+      "label": "t:labels.text_color",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "dark"
+    }
+  ],
+  "presets": [{ "name": "t:general.headline_banner" }],
+  "enabled_on": {
+    "templates": ["page"]
+  }
+}
+{% endschema %}

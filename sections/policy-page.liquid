@@ -1,0 +1,150 @@
+{% comment %}
+  Renders one of Shopify's native policy pages (Privacy, Refund, Terms
+  of Service, Shipping, Subscription) with the same layout as
+  simple-page.liquid — full-width submenu + headline/content row —
+  instead of Shopify's own unstyled default policy markup. There is no
+  theme template for these routes (Shopify doesn't support one), so
+  this is included directly from layout/theme.liquid for the handful
+  of paths that need it; see the request.path check there.
+
+  The policy content itself stays merchant-editable in Settings >
+  Policies rather than through this section, so it can keep the
+  canonical /policies/... URLs that checkout, the cookie-consent
+  banner, and Google Merchant Centre all expect.
+{% endcomment %}
+
+{% liquid
+  case request.path
+    when '/policies/privacy-policy'
+      assign policy = shop.privacy_policy
+    when '/policies/refund-policy'
+      assign policy = shop.refund_policy
+    when '/policies/terms-of-service'
+      assign policy = shop.terms_of_service
+    when '/policies/shipping-policy'
+      assign policy = shop.shipping_policy
+    when '/policies/subscription-policy'
+      assign policy = shop.subscription_policy
+  endcase
+%}
+
+<div class="policy-page-header full-width">
+  {% render 'page-submenu', menu: linklists['footer-2'] %}
+
+  <div class="policy-page-body">
+    <p class="policy-page-headline">{{ policy.title }}</p>
+
+    <div class="policy-page-content rte">
+      {{ policy.body }}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .policy-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-96);
+    padding-left: var(--page-margin);
+    padding-right: var(--page-margin);
+  }
+
+  .policy-page-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .policy-page-headline {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .policy-page-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+  }
+
+  .policy-page-content p {
+    margin: 0;
+  }
+
+  /* Links: see .rte in assets/critical.css. */
+
+  /* Flush with the rest of the text (no browser-default list indent)
+     — square bullets matching the dots used elsewhere in the theme,
+     same treatment as .product-accordion__content in
+     sections/product.liquid. */
+  .policy-page-content ul,
+  .policy-page-content ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .policy-page-content ul li {
+    position: relative;
+    padding-left: calc(4px + var(--space-6));
+  }
+
+  .policy-page-content ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 4px;
+    height: 4px;
+    background-color: var(--color-foreground);
+  }
+
+  /* Shopify's own auto-generated policy text (e.g. the default AGB/
+     Terms template) is written as one long paragraph using single
+     <br> line breaks for everything, headers included, rather than
+     real <p> tags — turning it into a dense, illegible wall of text
+     no matter how the real paragraphs above are spaced. Giving every
+     line break its own block-level gap is the only lever theme CSS
+     has on content it doesn't control. */
+  .policy-page-content br {
+    display: block;
+    content: '';
+    margin-bottom: var(--space-8);
+  }
+
+  .policy-page-content h1,
+  .policy-page-content h2,
+  .policy-page-content h3,
+  .policy-page-content h4,
+  .policy-page-content h5,
+  .policy-page-content h6 {
+    /* Size, weight and versals: see .rte in assets/critical.css. */
+    margin: 0;
+  }
+
+  @media (min-width: 750px) {
+    .policy-page-body {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .policy-page-headline {
+      grid-column: 1 / 3;
+    }
+
+    .policy-page-content {
+      grid-column: 3 / 5;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.policy_page",
+  "settings": []
+}
+{% endschema %}

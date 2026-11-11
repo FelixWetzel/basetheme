@@ -1,0 +1,166 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin language editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "404": {
+    "title": "404",
+    "not_found": "Seite nicht gefunden.",
+    "back_to_shopping": "Weiter einkaufen"
+  },
+  "blog": {
+    "article_comments": "Kommentare",
+    "article_metadata_html": "{{ date }} von {{ author }}",
+    "comment_form_body": "Kommentar",
+    "comment_form_email": "E-Mail",
+    "comment_form_name": "Name",
+    "comment_form_submit": "Absenden",
+    "comment_form_title": "Kommentar schreiben"
+  },
+  "cart": {
+    "checkout": "Zur Kasse",
+    "title": "Warenkorb",
+    "update": "Aktualisieren",
+    "remove": "Entfernen",
+    "decrease_quantity": "Menge verringern",
+    "increase_quantity": "Menge erhöhen",
+    "shipping": "Lieferung",
+    "shipping_note": "Wird im nächsten Schritt berechnet",
+    "subtotal": "Bestellsumme",
+    "empty": "Dein Warenkorb ist leer.",
+    "view_all_products": "Alle Produkte ansehen",
+    "warranty": "Gesetzliche Gewährleistung",
+    "free_shipping_remaining": "Noch {{ amount }} € bis zum kostenlosen Versand",
+    "free_shipping_reached": "Kostenlose Lieferung erreicht!",
+    "recommendations": "Passt dazu"
+  },
+  "customers": {
+    "login": {
+      "email": "E-Mail",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "title": "Anmelden"
+    }
+  },
+  "collections": {
+    "title": "Kategorien",
+    "all_products": "Alle Produkte",
+    "objects_count": {
+      "one": "{{ count }} Produkt",
+      "other": "{{ count }} Produkte"
+    },
+    "no_matches": "Keine Produkte gefunden.",
+    "grid_columns": "Spaltenanzahl",
+    "filter": {
+      "button": "Filter",
+      "title": "Filter",
+      "sort": "Sortieren",
+      "featured": "Empfohlen",
+      "color": "Farbe",
+      "material": "Material",
+      "labels": "Label",
+      "price_ascending": "Preis aufsteigend",
+      "price_descending": "Preis absteigend",
+      "reset": "Auswahl zurücksetzen",
+      "show": "{{ count }} Produkte anzeigen"
+    }
+  },
+  "general": {
+    "page_submenu": "Seitennavigation",
+    "withdrawal": {
+      "name": "Name",
+      "order_number": "Bestellnummer",
+      "email": "E-Mail-Adresse für die Bestätigung",
+      "message": "Nachricht (optional)",
+      "message_hint": "Optional, z. B. welche Artikel der Widerruf umfasst. Ein Grund ist nicht erforderlich."
+    },
+    "warranty_notice": {
+      "alt": "EU-Hinweis „Gesetzliche Gewährleistung“: mindestens zwei Jahre gesetzliche Gewährleistung für Waren, die in der Europäischen Union verkauft werden."
+    },
+    "newsletter": {
+      "placeholder": "Deine E-Mail-Adresse",
+      "submit": "Anmelden",
+      "success_heading": "Danke für deine Anmeldung",
+      "success_text": "Du bekommst ab jetzt Neuigkeiten von uns per E-Mail. In deiner Bestätigungsmail findest du einen Rabattcode für deine erste Bestellung. Schau bitte auch in deinem Spam-Ordner nach, falls sie nicht in deinem Posteingang ankommt.",
+      "page_heading": "Newsletter"
+    },
+    "media_text": {
+      "read_more": "Mehr lesen",
+      "read_less": "Weniger anzeigen"
+    },
+    "announcement_bar": {
+      "slides": "Ankündigungen",
+      "slide": "Ankündigung {{ index }}"
+    },
+    "story": {
+      "previous": "Vorherige Story",
+      "next": "Nächste Story"
+    },
+    "footer": {
+      "copyright": "{{ shop }} ©{{ year }}",
+      "credit": "Made with love by BüroBüro.eu"
+    },
+    "header": {
+      "account": "Konto",
+      "cart_label": "Warenkorb, {{ count }} Artikel",
+      "menu": "Menü",
+      "close": "Schließen"
+    }
+  },
+  "products": {
+    "card": {
+      "colors": {
+        "one": "{{ count }} Variante",
+        "other": "{{ count }} Varianten"
+      },
+      "images": "Produktbilder",
+      "image": "Bild {{ index }}",
+      "choose_options": "Optionen wählen",
+      "quick_add": "Hinzufügen",
+      "added": "Hinzugefügt",
+      "added_message": "hinzugefügt",
+      "view_cart": "Warenkorb ansehen"
+    },
+    "add_to_cart": "In den Warenkorb",
+    "sold_out": "Ausverkauft",
+    "notify": "Zum Newsletter anmelden und nichts verpassen",
+    "zoom": "Zoom",
+    "accordion": {
+      "description": "Beschreibung",
+      "details": "Details",
+      "care": "Pflege",
+      "shipping": "Versand & Rückgaben"
+    },
+    "recommendations": {
+      "heading": "Empfohlene Produkte"
+    },
+    "breadcrumbs": {
+      "label": "Brotkrümelnavigation"
+    }
+  },
+  "gift_card": {
+    "add_to_apple_wallet": "Zu Apple Wallet hinzufügen",
+    "card": "Geschenkkarte",
+    "expired": "Diese Geschenkkarte ist abgelaufen",
+    "expires_on": "Gültig bis {{ expires_on }}",
+    "use_at_checkout": "Diese Geschenkkarte an der Kasse einlösen"
+  },
+  "password": {
+    "title": "Bald geht's los",
+    "password": "Passwort",
+    "enter": "Eintreten",
+    "newsletter": "Newsletter abonnieren"
+  },
+  "search": {
+    "title": "Suche",
+    "placeholder": "Produkte, Seiten oder Artikel suchen",
+    "submit": "Suchen",
+    "no_results_html": "Keine Ergebnisse für {{ terms }}",
+    "results_for_html": "{{ count }} Ergebnisse für {{ terms }}"
+  }
+}

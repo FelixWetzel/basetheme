@@ -1,0 +1,74 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "header",
+  "name": "t:general.header",
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "announcement_4VieHp": {
+          "type": "announcement",
+          "name": "t:general.announcement",
+          "settings": {
+            "text": "Ankündigung 1",
+            "text_mobile": "Ankündigung 1 (mobil)",
+            "cta": "",
+            "link": "shopify://collections/all"
+          },
+          "blocks": {}
+        },
+        "announcement_WfwFaL": {
+          "type": "announcement",
+          "name": "t:general.announcement",
+          "settings": {
+            "text": "Ankündigung 2",
+            "text_mobile": "Ankündigung 2 (mobil)",
+            "cta": "",
+            "link": ""
+          },
+          "blocks": {}
+        },
+        "announcement-1": {
+          "type": "announcement",
+          "settings": {
+            "text": "Ankündigung 3",
+            "text_mobile": "",
+            "cta": "Anmelden",
+            "link": "#newsletter-popup"
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "announcement_4VieHp",
+        "announcement_WfwFaL",
+        "announcement-1"
+      ],
+      "settings": {
+        "background_color": "",
+        "text_color": "light",
+        "uppercase": false,
+        "speed": 8
+      }
+    },
+    "header": {
+      "type": "header",
+      "settings": {
+        "menu_primary": "menu1",
+        "menu_secondary": "menu2"
+      }
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header"
+  ]
+}

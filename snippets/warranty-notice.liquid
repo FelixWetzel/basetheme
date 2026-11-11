@@ -1,0 +1,41 @@
+{% doc %}
+  The EU "harmonised notice" on the legal guarantee (Directive (EU)
+  2024/825, Implementing Regulation (EU) 2025/1960) as the official,
+  unaltered German graphic, plus its full text for screen readers.
+  Used on the "Gesetzliche Gewährleistung" page
+  (blocks/warranty-notice.liquid); the cart drawer links straight to the
+  same graphic file. The graphic may only be scaled down
+  proportionally — never cropped, recoloured or restyled.
+
+  @example
+  {% render 'warranty-notice' %}
+{% enddoc %}
+
+<img
+  class="warranty-notice-image"
+  src="{{ 'gewaehrleistungslabel-de.png' | asset_url }}"
+  alt="{{ 'general.warranty_notice.alt' | t }}"
+  width="1219"
+  height="1668"
+  loading="lazy"
+>
+
+<div class="visually-hidden">
+  <p>Mindestens zwei Jahre gesetzliche Gewährleistung der Vertragsmäßigkeit für Waren, die in der Europäischen Union verkauft werden.</p>
+  <p>Verbraucherinnen und Verbraucher können ihre Rechte im Rahmen des gesetzlichen Gewährleistungsrechts geltend machen, z. B. wenn die Waren nicht der Beschreibung entsprechen oder nicht bestimmungsgemäß funktionieren.</p>
+  <p>Verkäufer haften für jede Vertragswidrigkeit, die zum Zeitpunkt der Lieferung der Waren bestand und innerhalb des Zeitraums der gesetzlichen Gewährleistung erkennbar wird. Verkäufer müssen in solchen Fällen Folgendes anbieten: kostenlose Nachbesserung oder kostenlose Ersatzlieferung, in bestimmten Fällen eine Preisminderung oder eine vollständige Erstattung des Kaufpreises.</p>
+  <p>In einigen Ländern gilt ein längerer Zeitraum für die gesetzliche Gewährleistung. Für gebrauchte Waren kann ein kürzerer Zeitraum gelten, jedoch nicht weniger als ein Jahr. Für weitere Informationen zu Ihren Rechten in einem bestimmten Land besuchen Sie europa.eu/youreurope/garantien oder fragen Sie den Verkäufer.</p>
+  <p>Was ist zu tun, wenn Sie vertragswidrige Waren erhalten? 1. Melden Sie dem Verkäufer das Problem so bald wie möglich. 2. Legen Sie einen Kaufnachweis vor, z. B. die Quittung, Rechnung oder einen Kontoauszug.</p>
+  <p>Verkäufer und Hersteller können auch gewerbliche Garantien gewähren, die unabhängig von der gesetzlichen Gewährleistung gelten. Die GARAN-Kennzeichnung zeigt beispielsweise, dass der Hersteller eine gewerbliche Haltbarkeitsgarantie ohne zusätzliche Kosten gewährt, die die gesamte Ware abdeckt.</p>
+</div>
+
+{% stylesheet %}
+  /* Capped at half the file's width so the label stays sharp on
+     high-density screens. */
+  .warranty-notice-image {
+    display: block;
+    width: 100%;
+    max-width: 610px;
+    height: auto;
+  }
+{% endstylesheet %}

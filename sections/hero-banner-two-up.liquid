@@ -1,0 +1,169 @@
+{% comment %}
+  Two hero banners side by side on desktop, stacked on mobile — each
+  half is an independently configurable hero-banner-two-up-item block
+  (image, product name, subline, CTA), sharing the same parallax and
+  hover-reveal-CTA behavior as the single-image hero-banner section.
+{% endcomment %}
+
+<div
+  class="hero-banner-two-up full-width{% if section.settings.mobile_single_image %} hero-banner-two-up--mobile-single{% endif %}"
+>
+  {% content_for 'blocks' %}
+
+  {% if section.settings.show_logo and settings.logo_signet != blank %}
+    <div
+      class="hero-banner-two-up__logo hero-banner-two-up__logo--{{ section.settings.logo_color }} hero-banner-two-up__logo--{{ section.settings.logo_position }}"
+      aria-hidden="true"
+    >
+      {% render 'logo', type: 'signet', fallback: 'none' %}
+    </div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .hero-banner-two-up {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Shopify wraps each rendered block in its own `.shopify-block` div
+     (see the same pattern in sections/footer.liquid) — that wrapper
+     is the actual flex item, so the two halves split the row evenly. */
+  .hero-banner-two-up > .shopify-block {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+
+  /* Centred over both halves (straddling the seam on desktop). Not a
+     link itself, so clicks fall through to whichever half is below. */
+  .hero-banner-two-up__logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  /* Signet height: --signet-scale (Theme-Einstellungen → Logo) of the
+     content width on desktop, 120% of that on mobile. The width
+     follows from the signet's aspect ratio. */
+  .hero-banner-two-up__logo .theme-logo {
+    display: block;
+    width: auto;
+    height: calc((100vw - 2 * var(--page-margin)) * var(--signet-scale));
+  }
+
+  /* Desktop: over both images (on the seam), or centred on just the
+     left or right one — then at 60%, since it sits on a half-width
+     image. */
+  @media (min-width: 750px) {
+    .hero-banner-two-up__logo--left {
+      left: 25%;
+    }
+
+    .hero-banner-two-up__logo--right {
+      left: 75%;
+    }
+
+    :is(.hero-banner-two-up__logo--left, .hero-banner-two-up__logo--right) .theme-logo {
+      height: calc((100vw - 2 * var(--page-margin)) * var(--signet-scale) * 0.6);
+    }
+  }
+
+  /* Mobile, halves stacked (each a 4:5 full-width image): centred on
+     the first image instead of on the seam, or on the second image
+     when the logo belongs to the right one. With only one image shown
+     on mobile, the default 50% already centres it on that one. */
+  @media (max-width: 749px) {
+    .hero-banner-two-up:not(.hero-banner-two-up--mobile-single) .hero-banner-two-up__logo {
+      top: calc(100vw * 5 / 8);
+    }
+
+    .hero-banner-two-up:not(.hero-banner-two-up--mobile-single) .hero-banner-two-up__logo--right {
+      top: calc(100vw * 15 / 8);
+    }
+  }
+
+  @media (max-width: 749px) {
+    .hero-banner-two-up__logo .theme-logo {
+      height: calc((100vw - 2 * var(--page-margin)) * var(--signet-scale) * 1.2);
+    }
+  }
+
+  .hero-banner-two-up__logo--light {
+    color: var(--color-background);
+  }
+
+  .hero-banner-two-up__logo--dark {
+    color: var(--color-foreground);
+  }
+
+  @media (min-width: 750px) {
+    .hero-banner-two-up {
+      flex-direction: row;
+    }
+  }
+
+  @media (max-width: 749px) {
+    .hero-banner-two-up--mobile-single > .shopify-block ~ .shopify-block {
+      display: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.hero_banner_two_up",
+  "blocks": [{ "type": "hero-banner-two-up-item" }],
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "mobile_single_image",
+      "label": "t:labels.mobile_single_image",
+      "info": "t:labels.mobile_single_image_info",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_logo",
+      "label": "t:labels.show_logo",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "logo_position",
+      "label": "t:labels.logo_position",
+      "info": "t:labels.logo_position_info",
+      "options": [
+        { "value": "center", "label": "t:options.logo_position.center" },
+        { "value": "left", "label": "t:options.logo_position.left" },
+        { "value": "right", "label": "t:options.logo_position.right" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "logo_color",
+      "label": "t:labels.logo_color",
+      "options": [
+        { "value": "light", "label": "t:options.text_color.light" },
+        { "value": "dark", "label": "t:options.text_color.dark" }
+      ],
+      "default": "light"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.hero_banner_two_up",
+      "blocks": [
+        { "type": "hero-banner-two-up-item" },
+        { "type": "hero-banner-two-up-item" }
+      ]
+    }
+  ],
+  "enabled_on": {
+    "templates": ["index"]
+  }
+}
+{% endschema %}

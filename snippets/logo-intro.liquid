@@ -1,0 +1,130 @@
+{% doc %}
+  Renders a brief intro overlay: the wordmark at full content-width
+  (same sizing as the footer logo) directly over the page — no
+  covering background — fading out after a moment. Matches whichever
+  text color the page's first banner (hero/headline banner, etc.) was
+  set to, so it stays legible against that banner's own image —
+  falling back to white on the homepage / black everywhere else when
+  there's no such banner to read from. Shown on every visit to the
+  homepage; on other pages (with the "all pages" setting) only on a
+  genuine reload, not when navigating from page to page — determined
+  via the Navigation Timing API rather than session storage, since
+  every click is a full page load in this theme. Respects
+  prefers-reduced-motion (skips straight to hidden).
+
+  @example
+  {% render 'logo-intro' %}
+{% enddoc %}
+
+<div
+  class="logo-intro"
+  data-logo-intro
+  data-is-homepage="{% if request.page_type == 'index' %}true{% else %}false{% endif %}"
+  aria-hidden="true"
+  hidden
+>
+  <div class="logo-intro__logo">
+    {% render 'logo', type: 'large' %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .logo-intro[hidden] {
+    display: none;
+  }
+
+  .logo-intro:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--page-margin);
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+
+  .logo-intro.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .logo-intro__logo {
+    width: 100%;
+  }
+
+  .logo-intro__logo .theme-logo:not(.theme-logo--text) {
+    width: 100%;
+    height: auto;
+  }
+
+  .logo-intro__logo {
+    color: var(--color-foreground);
+  }
+
+  .logo-intro[data-is-homepage="true"] .logo-intro__logo,
+  .logo-intro[data-banner-color="light"] .logo-intro__logo {
+    color: var(--color-background);
+  }
+
+  .logo-intro[data-banner-color="dark"] .logo-intro__logo {
+    color: var(--color-foreground);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-intro {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const intro = document.querySelector('[data-logo-intro]');
+    if (!intro) return;
+
+    // Shows on every page, but only for a genuine reload (hitting
+    // refresh, or the very first load of a browser tab) — not when
+    // navigating from page to page within the same session, since
+    // Shopify does a full page load on every link click too and this
+    // theme only wants the intro on an actual reload. The Navigation
+    // Timing API tells the two apart directly.
+    let navigationType = 'navigate';
+    try {
+      navigationType = performance.getEntriesByType('navigation')[0]?.type || 'navigate';
+    } catch (error) {
+      navigationType = 'navigate';
+    }
+
+    // Stays hidden by default (the `hidden` attribute is already set
+    // in the markup) unless this is a reload — avoids a flash of the
+    // overlay before JS gets a chance to hide it otherwise. The
+    // homepage shows it on every visit, however it was reached.
+    if (intro.dataset.isHomepage !== 'true' && navigationType !== 'reload') return;
+
+    // Reads the same light/dark choice already made for the page's
+    // first banner (whichever one comes first in the DOM), so the
+    // logo stays legible against that banner's own image instead of
+    // guessing at the background from scratch. Falls back to the
+    // is-homepage default when the page has no such banner.
+    const firstBanner = document.querySelector(
+      '.hero-banner--light, .hero-banner--dark, .headline-banner--light, .headline-banner--dark, .hero-banner-two-up-item--light, .hero-banner-two-up-item--dark, .collection-banner--light, .collection-banner--dark',
+    );
+    if (firstBanner) {
+      intro.dataset.bannerColor = firstBanner.className.includes('--light') ? 'light' : 'dark';
+    }
+
+    intro.hidden = false;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const hide = () => {
+      intro.classList.add('is-hidden');
+      intro.addEventListener('transitionend', () => (intro.hidden = true), { once: true });
+      if (prefersReducedMotion) intro.hidden = true;
+    };
+
+    window.setTimeout(hide, prefersReducedMotion ? 0 : 2000);
+  })();
+{% endjavascript %}

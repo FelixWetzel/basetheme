@@ -1,0 +1,82 @@
+{% doc %}
+  Subtle scroll reveal: page sections, the footer and product cards
+  fade in as they scroll into view. Fade only, no movement — a shift
+  would pull full-bleed banners away from the edge above them.
+
+  Progressive by design: elements are only hidden by JS, and only if
+  they start out below the visible screen — so without JS, for
+  content already on screen at load, and for content added later
+  (e.g. filtered product grids) nothing is ever hidden. A section that
+  contains product cards isn't faded as a whole; its cards are, one
+  by one (staggered when several appear at once). Once revealed, the
+  classes are removed again. Off with reduced motion or the theme
+  setting.
+
+  @example
+  {% render 'scroll-reveal' %}
+{% enddoc %}
+
+{% style %}
+  .scroll-reveal {
+    opacity: 0;
+    transition: opacity 0.9s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .scroll-reveal.is-revealed {
+    opacity: 1;
+  }
+{% endstyle %}
+
+<script>
+  (() => {
+    if (!('IntersectionObserver' in window)) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.Shopify && window.Shopify.designMode) return;
+
+    const init = () => {
+      const sections = [
+        ...document.querySelectorAll('.main-content > .shopify-section'),
+        ...document.querySelectorAll('footer'),
+      ].filter((section) => !section.querySelector('.product-card'));
+      const targets = [...sections, ...document.querySelectorAll('.product-card')];
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          let batchIndex = 0;
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            observer.unobserve(el);
+            // Several cards coming in together (a grid row) follow each other
+            el.style.transitionDelay = `${Math.min(batchIndex, 5) * 80}ms`;
+            batchIndex += 1;
+            el.classList.add('is-revealed');
+            el.addEventListener(
+              'transitionend',
+              () => {
+                el.classList.remove('scroll-reveal', 'is-revealed');
+                el.style.transitionDelay = '';
+              },
+              { once: true }
+            );
+          });
+        },
+        { rootMargin: '0px 0px -8% 0px' }
+      );
+
+      const viewportHeight = window.innerHeight;
+      targets.forEach((el) => {
+        // Already (partly) on screen at load: leave it alone
+        if (el.getBoundingClientRect().top < viewportHeight) return;
+        el.classList.add('scroll-reveal');
+        observer.observe(el);
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+</script>

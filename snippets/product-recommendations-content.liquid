@@ -1,0 +1,82 @@
+{% doc %}
+  Contents of the "Empfohlene Produkte" block: heading and an "Alle
+  Produkte" CTA (same header row as sections/product-grid.liquid),
+  then up to 4 product cards. Shared by both recommendation sources —
+  products picked by hand (custom.recommended_products metafield, in
+  sections/product.liquid) and Shopify's automatic ones
+  (sections/product-recommendations.liquid) — so they can't drift
+  apart.
+
+  Hand-picked products come first, each in `color` (the color selected
+  on the product page) when it has that color, otherwise as the whole
+  product. Then the hand-picked variants (custom.recommended_variants),
+  which keep their own color; each renders as that variant's card (its
+  photos, price and `?variant=` link), as in a collection split by
+  color. A product also picked as a variant only shows as that variant.
+
+  @param {product[]} [products] - Products to show first, following `color`
+  @param {variant[]} [variants] - Variants to show after the products, in their own color
+  @param {string} [color] - Color the products follow (option "Farbe" or "Color")
+
+  @example
+  {% render 'product-recommendations-content', products: recommendations.products %}
+  {% render 'product-recommendations-content', variants: fixed_variants, products: matching_products, color: 'Schwarz' %}
+{% enddoc %}
+
+<div class="product-recommendations__header">
+  <p class="product-recommendations__heading">{{ 'products.recommendations.heading' | t }}</p>
+  <a href="{{ routes.all_products_collection_url }}" class="product-recommendations__cta cta">
+    {{- 'collections.all_products' | t -}}
+  </a>
+</div>
+
+<div class="product-recommendations__grid">
+  {% liquid
+    # A product also picked as a fixed variant only shows as that variant.
+    assign variant_product_ids = variants | map: 'product' | map: 'id' | join: ','
+    assign variant_product_ids = ',' | append: variant_product_ids | append: ','
+    assign shown_count = 0
+
+    for recommended_product in products
+      if shown_count >= 4
+        break
+      endif
+      assign needle = ',' | append: recommended_product.id | append: ','
+      if variant_product_ids contains needle
+        continue
+      endif
+
+      assign card_variant = nil
+      if color != blank
+        assign color_option = recommended_product.options_with_values | where: 'name', 'Farbe' | first
+        unless color_option
+          assign color_option = recommended_product.options_with_values | where: 'name', 'Color' | first
+        endunless
+        if color_option
+          assign color_index = color_option.position | minus: 1
+          for candidate in recommended_product.variants
+            if candidate.options[color_index] == color
+              assign card_variant = candidate
+              break
+            endif
+          endfor
+        endif
+      endif
+
+      if card_variant
+        render 'product-card', product: recommended_product, variant: card_variant
+      else
+        render 'product-card', product: recommended_product
+      endif
+      assign shown_count = shown_count | plus: 1
+    endfor
+
+    for recommended_variant in variants
+      if shown_count >= 4
+        break
+      endif
+      render 'product-card', product: recommended_variant.product, variant: recommended_variant
+      assign shown_count = shown_count | plus: 1
+    endfor
+  %}
+</div>

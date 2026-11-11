@@ -1,0 +1,37 @@
+{% doc %}
+  One option (checkbox) in the collection filter drawer
+  (snippets/collection-filter-drawer.liquid). Its count is filled in
+  by the drawer's JS.
+
+  @param {string} group - The filter group / URL parameter ("merkmal", "farbe" or "material")
+  @param {string} label - The option's value, shown as is
+  @param {object} [swatch] - A product option value swatch (colour and/or image)
+
+  @example
+  {% render 'collection-filter-option', group: 'farbe', label: value.name, swatch: value.swatch %}
+{% enddoc %}
+
+{%- liquid
+  assign has_swatch = false
+  if swatch.color or swatch.image
+    assign has_swatch = true
+  endif
+-%}
+
+<label class="filter-option{% if has_swatch %} filter-option--swatch{% endif %}">
+  <input class="visually-hidden" type="checkbox" name="{{ group }}" value="{{ label | escape }}" data-filter-option>
+  {%- if has_swatch -%}
+    <span
+      class="filter-option__swatch"
+      style="
+        {%- if swatch.image -%}
+          background-image: url({{ swatch.image | image_url: width: 90 }});
+        {%- else -%}
+          background-color: {{ swatch.color }};
+        {%- endif -%}
+      "
+      aria-hidden="true"
+    ></span>
+  {%- endif -%}
+  <span class="filter-option__label">{{ label }}<sup class="filter-count" data-filter-option-count></sup></span>
+</label>

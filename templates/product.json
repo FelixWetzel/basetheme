@@ -1,0 +1,22 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "product",
+      "settings": {
+        "shipping_text": "<ul><li>Bis XX € Bestellwert berechnen wir X,XX € Versandkosten</li><li>Ab XX € Bestellwert kostenfreie Lieferung</li><li>Kostenfreie Rückgabe im Rahmen des gesetzlichen Widerrufsrechts innerhalb 14 Tage ab Erhalt der Ware</li></ul>"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

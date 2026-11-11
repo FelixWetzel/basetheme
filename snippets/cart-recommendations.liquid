@@ -1,0 +1,244 @@
+{% doc %}
+  The cart drawer's "Passt dazu" carousel: up to 6 products, each 85%
+  of the drawer wide (a single one full width), with the announcement
+  bar's dots as the indicator; each one rendered by
+  snippets/cart-recommendation-item.liquid.
+
+  Collects the hand-picked recommendations of every cart item, in the
+  order the items were added — so adding a recommended product only
+  removes that one from the list instead of swapping the whole list:
+  first its products (custom.recommended_products), each in the colour
+  of the cart item that recommended it, then its fixed variants
+  (custom.recommended_variants, in their own colour; a product picked
+  both ways only shows as the variant). Then, if given, `fallback_products` (Shopify's
+  automatic recommendations, see sections/cart-recommendations.liquid)
+  in the colour of the first cart item, only topping up to 3 — so a
+  product without hand-picked ones doesn't get more than one with
+  them. Products already in the cart, sold-out ones and duplicates are
+  skipped; renders nothing if none are left. The wrapper carries
+  data-cart-recommendations-full once there are at least three, which
+  snippets/cart-drawer.liquid checks to decide whether to top up with
+  automatic ones.
+
+  Also used for the empty cart (snippets/cart-drawer.liquid), with the
+  hand-picked or newest products as `fallback_products`, its own
+  `heading` and `limit`.
+
+  @param {product[]} [fallback_products] - Products to top up with after the hand-picked ones
+  @param {string} [heading] - Heading instead of the "Passt dazu" setting
+  @param {number} [limit] - How many to top up to with fallback_products (default 3)
+
+  @example
+  {% render 'cart-recommendations' %}
+  {% render 'cart-recommendations', fallback_products: recommendations.products %}
+{% enddoc %}
+
+{% liquid
+  assign cart_product_ids = cart.items | map: 'product_id' | join: ','
+  assign cart_product_ids = ',' | append: cart_product_ids | append: ','
+
+  # Shopify lists the most recently added item first.
+  assign items_oldest_first = cart.items | reverse
+
+  assign picked_ids = ','
+  assign shown_count = 0
+  assign fallback_limit = limit | default: 3
+  assign first_item_color = ''
+%}
+
+{% capture slides %}
+  {% for item in items_oldest_first %}
+    {% liquid
+      assign source_color = ''
+      for option in item.product.options_with_values
+        if option.name == 'Farbe' or option.name == 'Color'
+          assign source_color = item.variant.options[forloop.index0]
+        endif
+      endfor
+      if forloop.first
+        assign first_item_color = source_color
+      endif
+
+      assign hand_picked_variants = item.product.metafields.custom.recommended_variants.value
+      assign hand_picked = item.product.metafields.custom.recommended_products.value
+      assign variant_product_ids = hand_picked_variants | map: 'product' | map: 'id' | join: ','
+      assign variant_product_ids = ',' | append: variant_product_ids | append: ','
+    %}
+    {% for recommended_product in hand_picked %}
+      {% liquid
+        if shown_count >= 6
+          break
+        endif
+        assign needle = ',' | append: recommended_product.id | append: ','
+        if recommended_product.available == false or cart_product_ids contains needle or picked_ids contains needle or variant_product_ids contains needle
+          continue
+        endif
+        assign picked_ids = picked_ids | append: recommended_product.id | append: ','
+        assign shown_count = shown_count | plus: 1
+      %}
+      {% render 'cart-recommendation-item', product: recommended_product, color: source_color %}
+    {% endfor %}
+    {% for recommended_variant in hand_picked_variants %}
+      {% liquid
+        if shown_count >= 6
+          break
+        endif
+        assign needle = ',' | append: recommended_variant.product.id | append: ','
+        if recommended_variant.available == false or cart_product_ids contains needle or picked_ids contains needle
+          continue
+        endif
+        assign picked_ids = picked_ids | append: recommended_variant.product.id | append: ','
+        assign shown_count = shown_count | plus: 1
+      %}
+      {% render 'cart-recommendation-item', product: recommended_variant.product, variant: recommended_variant %}
+    {% endfor %}
+  {% endfor %}
+
+  {% for recommended_product in fallback_products %}
+    {% liquid
+      if shown_count >= fallback_limit
+        break
+      endif
+      assign needle = ',' | append: recommended_product.id | append: ','
+      if recommended_product.available == false or cart_product_ids contains needle or picked_ids contains needle
+        continue
+      endif
+      assign picked_ids = picked_ids | append: recommended_product.id | append: ','
+      assign shown_count = shown_count | plus: 1
+    %}
+    {% render 'cart-recommendation-item', product: recommended_product, color: first_item_color %}
+  {% endfor %}
+{% endcapture %}
+
+{% if shown_count > 0 %}
+  <div class="cart-recommendations" {% if shown_count >= 3 %}data-cart-recommendations-full{% endif %}>
+    <div class="cart-recommendations__header">
+      <p class="cart-recommendations__heading">
+        {%- if heading != blank -%}
+          {{- heading | escape -}}
+        {%- elsif settings.cart_recommendations_heading != blank -%}
+          {{- settings.cart_recommendations_heading | escape -}}
+        {%- else -%}
+          {{- 'cart.recommendations' | t -}}
+        {%- endif -%}
+      </p>
+
+      {% # Same dots as the announcement bar %}
+      {% if shown_count > 1 %}
+        <div class="cart-recommendations__dots">
+          {% for i in (1..shown_count) %}
+            <button
+              type="button"
+              class="cart-recommendations__dot{% if forloop.first %} is-active{% endif %}"
+              data-cart-recommendations-dot="{{ forloop.index0 }}"
+              aria-label="{{ 'general.announcement_bar.slide' | t: index: forloop.index }}"
+            ></button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="cart-recommendations__track" data-cart-recommendations-track>
+      {{- slides -}}
+    </div>
+  </div>
+{% endif %}
+
+{% stylesheet %}
+  /* Same left inset as the summary, dots on the right; a full-width
+     line below, like the one under the drawer's top bar. */
+  .cart-recommendations__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-16);
+    padding: var(--space-12) var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .cart-recommendations__heading {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-versal);
+  }
+
+  .cart-recommendations__dots {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+
+  .cart-recommendations__dot {
+    width: 4px;
+    height: 4px;
+    padding: 0;
+    border: none;
+    background-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    cursor: pointer;
+  }
+
+  .cart-recommendations__dot.is-active {
+    background-color: var(--color-foreground);
+  }
+
+  /* Each product is 85% of the drawer wide, so the next one peeks in;
+     swipe/trackpad scrolls, snapping to whole products. The separator
+     line runs below the whole row instead of per product. */
+  .cart-recommendations__track {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* A single recommendation takes the full width. */
+  .cart-recommendations__track > .cart-drawer__item:only-child {
+    flex-basis: 100%;
+  }
+
+  .cart-recommendations__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cart-recommendations__track > .cart-drawer__item {
+    flex: 0 0 85%;
+    min-width: 0;
+    border-bottom: none;
+    scroll-snap-align: start;
+  }
+
+  .cart-recommendations__link {
+    color: var(--color-foreground);
+    text-decoration: none;
+  }
+
+  /* Sits where a line item has its quantity stepper. */
+  .cart-recommendations__add {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    align-self: flex-start;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    white-space: nowrap;
+    color: var(--color-foreground);
+    cursor: pointer;
+    transition: opacity 0.3s ease-out;
+  }
+
+  .cart-recommendations__add:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cart-recommendations__add:not(:disabled):hover {
+      opacity: 0.7;
+    }
+  }
+{% endstylesheet %}

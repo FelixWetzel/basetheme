@@ -1,0 +1,212 @@
+{% doc %}
+  Screensaver: after a set time without any mouse, keyboard or scroll
+  activity, a fullscreen video fades in with the big wordmark on top
+  (white or black, like the logo intro — see logo-intro.liquid). Any
+  activity fades it out again. Only on devices with a real mouse
+  (not phones/tablets); the video only plays while it's showing.
+  Configured under Theme settings → Bildschirmschoner.
+
+  @example
+  {% render 'screensaver' %}
+{% enddoc %}
+
+{% if settings.screensaver_enabled %}
+  <div
+    class="screensaver screensaver--{{ settings.screensaver_logo_color }}"
+    data-screensaver
+    data-delay="{{ settings.screensaver_delay }}"
+    style="--screensaver-video-opacity: {{ settings.screensaver_video_opacity | divided_by: 100.0 }};"
+    aria-hidden="true"
+    hidden
+  >
+    {% if settings.screensaver_video != blank %}
+      {{
+        settings.screensaver_video
+        | video_tag:
+          image_size: '1600x',
+          autoplay: false,
+          loop: true,
+          muted: true,
+          controls: false,
+          playsinline: true,
+          preload: 'none',
+          class: 'screensaver__video'
+      }}
+    {% endif %}
+
+    <div class="screensaver__logo">
+      {% render 'logo', type: 'large' %}
+    </div>
+  </div>
+{% endif %}
+
+{% stylesheet %}
+  .screensaver[hidden] {
+    display: none;
+  }
+
+  /* No background of its own: the page shows through the slightly
+     transparent video (or, without a video, around the logo — like
+     the logo intro). */
+  .screensaver:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--page-margin);
+    cursor: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+
+  .screensaver.is-visible {
+    opacity: 1;
+  }
+
+  .screensaver__video {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: var(--screensaver-video-opacity, 0.9);
+  }
+
+  /* Same halftone raster as the menu drawer's and newsletter popup's
+     backdrop (see sections/header.liquid), laid over the video. */
+  .screensaver::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1.5' height='1.5' fill='%23000'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+    background-position:
+      0 0,
+      2px 2px;
+  }
+
+  .screensaver__logo {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+  }
+
+  .screensaver__logo .theme-logo:not(.theme-logo--text) {
+    width: 100%;
+    height: auto;
+  }
+
+  .screensaver--light .screensaver__logo {
+    color: var(--color-background);
+  }
+
+  .screensaver--dark .screensaver__logo {
+    color: var(--color-foreground);
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    const screensaver = document.querySelector('[data-screensaver]');
+    if (!screensaver) return;
+
+    // Phones and tablets: no idle-mouse concept, and a fullscreen
+    // video popping up mid-read would just be in the way.
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const video = screensaver.querySelector('video');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delay = (Number(screensaver.dataset.delay) || 60) * 1000;
+
+    let timer;
+    let showing = false;
+
+    const fadeIn = () => {
+      if (!showing) return;
+      // Next frame, so the opacity transition runs from 0.
+      requestAnimationFrame(() => screensaver.classList.add('is-visible'));
+    };
+
+    // With a video, only fade in once it's actually playing — otherwise
+    // the plain background behind it flashes up first. Falls back to
+    // fading in anyway after 3s (slow connection, autoplay blocked).
+    const show = () => {
+      showing = true;
+      screensaver.hidden = false;
+      if (!video || prefersReducedMotion) return fadeIn();
+
+      let done = false;
+      const once = () => {
+        if (done) return;
+        done = true;
+        fadeIn();
+      };
+      video.addEventListener('playing', once, { once: true });
+      setTimeout(once, 3000);
+      video.play().catch(once);
+    };
+
+    // Start loading the video a few seconds before it's needed, so it
+    // can start playing straight away.
+    const preload = () => {
+      if (video && video.preload !== 'auto') {
+        video.preload = 'auto';
+        video.load();
+      }
+    };
+
+    const hide = () => {
+      showing = false;
+      // Still waiting for the video (never faded in): there's no
+      // transition to wait for, so take it away right now — otherwise
+      // the invisible overlay would keep blocking the page.
+      if (!screensaver.classList.contains('is-visible')) {
+        screensaver.hidden = true;
+        video?.pause();
+        return;
+      }
+      screensaver.classList.remove('is-visible');
+      screensaver.addEventListener(
+        'transitionend',
+        () => {
+          if (showing) return;
+          screensaver.hidden = true;
+          video?.pause();
+        },
+        { once: true },
+      );
+    };
+
+    let preloadTimer;
+
+    const reset = () => {
+      if (showing) hide();
+      clearTimeout(timer);
+      clearTimeout(preloadTimer);
+      timer = setTimeout(show, delay);
+      preloadTimer = setTimeout(preload, Math.max(delay - 5000, 0));
+    };
+
+    ['mousemove', 'mousedown', 'keydown', 'wheel', 'scroll', 'touchstart'].forEach((type) =>
+      window.addEventListener(type, reset, { passive: true }),
+    );
+
+    // A hidden tab isn't idle, it's just not being looked at.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearTimeout(timer);
+        clearTimeout(preloadTimer);
+      }
+      else reset();
+    });
+
+    reset();
+  })();
+{% endjavascript %}
